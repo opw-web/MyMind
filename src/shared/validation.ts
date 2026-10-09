@@ -1,0 +1,14 @@
+import { z } from 'zod';
+import { COLORS } from './model';
+import { isDate } from './dates';
+export const dateSchema = z.string().refine(isDate, 'Use a valid date in YYYY-MM-DD format');
+const title = z.string().trim().min(1, 'A title is required').max(240);
+const notes = z.string().max(10000);
+const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable();
+export const eventFields = z.object({ title, notes, color: z.enum(COLORS), startDate: dateSchema, endDate: dateSchema, startTime: time, endTime: time }).strict();
+export const taskFields = z.object({ title, notes, color: z.enum(COLORS), dueDate: dateSchema.nullable(), completed: z.boolean(), projectId: z.string().min(1), sectionId: z.string().min(1).nullable(), order: z.number().int().nonnegative() }).strict();
+export const projectFields = z.object({ title, order: z.number().int().nonnegative() }).strict();
+export const sectionFields = z.object({ title, projectId: z.string().min(1), order: z.number().int().nonnegative() }).strict();
+export const changeSchema = z.object({ action: z.enum(['create', 'update', 'delete']), entity: z.enum(['event', 'task', 'project', 'section']), id: z.string().min(1).optional(), fields: z.record(z.string(), z.unknown()).optional() }).strict();
+export const mutationSchema = z.object({ changes: z.array(changeSchema).min(1).max(100), label: z.string().min(1).max(240), expectedRevision: z.number().int().nonnegative(), requestId: z.string().min(1).max(100) }).strict();
+export const preferenceSchema = z.object({ timezone: z.string().refine(tz => { try { new Intl.DateTimeFormat('en', { timeZone: tz }); return true; } catch { return false; } }), dayWidth: z.number().int().min(20).max(240), year: z.number().int().min(1900).max(2200), chatOpen: z.boolean(), voiceAutoSend: z.boolean() }).partial().strict();

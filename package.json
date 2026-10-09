@@ -1,0 +1,60 @@
+{
+  "name": "mymind",
+  "version": "1.1.0",
+  "description": "A private month-row planner with a local Ollama assistant",
+  "author": "MYMIND",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.main.json && vite build",
+    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.json --noEmit",
+    "start": "npm run build && electron .",
+    "test": "tsx --test tests/*.test.ts",
+    "test:desktop": "node tests/desktop.cjs",
+    "test:model": "node tests/model.cjs",
+    "test:lifecycle": "node tests/lifecycle.cjs",
+    "icon": "node scripts/icon.cjs",
+    "build:speech": ".speech-env\\Scripts\\python.exe scripts/build-speech.py",
+    "package": "npm run build && node scripts/package.cjs"
+  },
+  "dependencies": {
+    "koffi": "3.3.2",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "latest",
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "playwright": "latest",
+    "png-to-ico": "latest",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  },
+  "build": {
+    "appId": "com.mymind.planner",
+    "productName": "MYMIND",
+    "directories": { "output": "release", "buildResources": "assets" },
+    "files": ["dist/**/*", "assets/icon.ico", "package.json"],
+    "asarUnpack": ["node_modules/koffi/**/*"],
+    "extraResources": [{"from":"speech-runtime","to":"speech"},{"from":"assets/third-party","to":"licenses"}],
+    "win": { "target": "nsis", "icon": "assets/icon.ico" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MYMIND",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "MYMIND-Setup-${version}.exe"
+    }
+  }
+}

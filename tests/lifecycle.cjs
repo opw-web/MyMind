@@ -1,0 +1,33 @@
+const {_electron:electron}=require('playwright');
+const assert=require('node:assert/strict');
+const {spawn,spawnSync}=require('node:child_process');
+const fs=require('node:fs');
+const path=require('node:path');
+const net=require('node:net');
+const {WindowsJob}=require('../dist/main/windows-job');
+const root=path.resolve(__dirname,'..'),executable=process.env.MYMIND_TEST_EXECUTABLE||require('electron'),args=process.env.MYMIND_TEST_EXECUTABLE?[]:[root];
+const report={executable,checks:[]};let app,independent;
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function freePort(){return new Promise(resolve=>{const server=net.createServer().listen(0,'127.0.0.1',()=>{const port=server.address().port;server.close(()=>resolve(port));});});}
+async function launch(name){const env={...process.env,MYMIND_TEST_MODE:'1',MYMIND_DATA_DIR:path.join(root,'test-results',`lifecycle-${name}-${Date.now()}`)};delete env.ELECTRON_RUN_AS_NODE;delete env.MYMIND_SKIP_OLLAMA;app=await electron.launch({executablePath:executable,args,env,timeout:30000});const page=await app.firstWindow();await page.getByRole('heading',{name:'Your calendar.'}).waitFor();return {page,env};}
+async function status(page,predicate,timeout=180000){const start=Date.now();while(Date.now()-start<timeout){const value=await page.evaluate(()=>window.planner.status());if(predicate(value))return value;if(value.state==='error')throw new Error(value.message);await pause(200);}throw new Error('Assistant readiness timed out.');}
+function runnerIds(pid){const result=spawnSync('powershell.exe',['-NoProfile','-Command',`Get-CimInstance Win32_Process -Filter "ParentProcessId=${pid}" | Select-Object -ExpandProperty ProcessId`],{encoding:'utf8',windowsHide:true});return result.stdout.trim().split(/\s+/).map(Number).filter(Boolean);}
+async function assertGone(value,runnerPids=[],started=Date.now()){
+  let portClosed=false,remaining=[];
+  const end=Date.now()+4500;
+  while(Date.now()<end){remaining=[value.pid,...runnerPids].filter(pid=>{try{process.kill(pid,0);return true;}catch{return false;}});try{await fetch(`http://127.0.0.1:${value.port}/api/version`,{signal:AbortSignal.timeout(300)});portClosed=false;}catch{portClosed=true;}if(!remaining.length&&portClosed)break;await pause(100);}
+  assert.deepEqual(remaining,[]);assert.equal(portClosed,true);const elapsed=Date.now()-started;assert.ok(elapsed<5000,`Shutdown took ${elapsed}ms`);return {server:value.pid,runners:runnerPids,port:value.port,portClosed,elapsed};
+}
+(async()=>{try{
+  const separatePort=await freePort();independent=new WindowsJob(path.join(process.env.LOCALAPPDATA,'Programs','Ollama','ollama.exe'),{...process.env,OLLAMA_HOST:`127.0.0.1:${separatePort}`,OLLAMA_NO_CLOUD:'1'});
+  let {page}=await launch('loading');let value=await status(page,s=>s.pid&&s.state==='loading');let start=Date.now();await app.close();app=undefined;report.checks.push({name:'close during loading',...(await assertGone(value,[],start))});assert.equal(independent.alive,true);
+  let opened=await launch('inference');page=opened.page;value=await status(page,s=>s.state==='ready');console.log(JSON.stringify({installedRuntime:value}));
+  const beforeGpu=spawnSync('nvidia-smi',['--query-gpu=memory.used','--format=csv,noheader,nounits'],{encoding:'utf8',windowsHide:true}).stdout.trim();
+  const second=spawn(executable,args,{env:opened.env,windowsHide:true,stdio:'ignore'});const secondExit=await new Promise((resolve,reject)=>{second.once('exit',resolve);second.once('error',reject);setTimeout(()=>reject(new Error('Second instance did not exit')),10000).unref();});assert.equal(secondExit,0);assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().length),1);assert.equal((await page.evaluate(()=>window.planner.status())).pid,value.pid);report.checks.push({name:'second launch focuses existing app',passed:true});
+  await page.getByRole('button',{name:/A little help/}).click();await page.getByLabel('Message local assistant').fill('Add an exam next Friday');await page.getByRole('button',{name:'Send message',exact:true}).click();await page.locator('.chat-message.assistant').filter({hasText:'Added event: Exam'}).waitFor({timeout:120000});assert.equal((await page.evaluate(()=>window.planner.snapshot())).events.length,1);report.checks.push({name:'installed chat applies a real model request',passed:true,gpu:value.gpu,context:value.context});
+  const speech=await page.evaluate(()=>window.planner.startSpeech());const inferenceMain=await app.evaluate(()=>process.pid);const runners=[...runnerIds(value.pid),...runnerIds(inferenceMain),speech.pid].filter((pid,index,pids)=>pids.indexOf(pid)===index);const pending=page.evaluate(()=>window.planner.chat({text:'Create a list of 30 project tasks for tomorrow',requestId:'shutdown-inference'})).catch(()=>undefined);await pause(250);start=Date.now();await app.close();app=undefined;await pending;report.checks.push({name:'close during inference',...(await assertGone(value,runners,start))});await assertGone(speech,[],start);report.checks.push({name:'speech worker closes with app',pid:speech.pid,passed:true});assert.equal(independent.alive,true);
+  await pause(1200);const afterGpu=spawnSync('nvidia-smi',['--query-gpu=memory.used','--format=csv,noheader,nounits'],{encoding:'utf8',windowsHide:true}).stdout.trim();report.gpuMemoryMiB={beforeClose:Number(beforeGpu),afterClose:Number(afterGpu)};assert.ok(Number(afterGpu)<Number(beforeGpu),'GPU memory did not fall after unloading');
+  ({page}=await launch('crash'));value=await status(page,s=>s.state==='ready');const crashSpeech=await page.evaluate(()=>window.planner.startSpeech());const mainPid=await app.evaluate(()=>process.pid);const crashRunners=[...runnerIds(value.pid),...runnerIds(mainPid),crashSpeech.pid].filter((pid,index,pids)=>pids.indexOf(pid)===index);
+  const mainClosed=app.waitForEvent('close').catch(()=>{});start=Date.now();process.kill(mainPid,'SIGKILL');await mainClosed;app=undefined;report.checks.push({name:'forced main-process termination',...(await assertGone(value,crashRunners,start))});await assertGone(crashSpeech,[],start);assert.equal(independent.alive,true);
+  const separateResponse=await fetch(`http://127.0.0.1:${separatePort}/api/version`);assert.equal(separateResponse.ok,true);report.checks.push({name:'independent Ollama remains alive',pid:independent.pid,passed:true});report.passed=true;
+}finally{if(app)await app.close();independent?.close();fs.mkdirSync(path.join(root,'test-results'),{recursive:true});fs.writeFileSync(path.join(root,'test-results','lifecycle-report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}})().catch(error=>{console.error(error);process.exitCode=1;});

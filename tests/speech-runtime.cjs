@@ -1,0 +1,4 @@
+const path=require('node:path'),fs=require('node:fs'),assert=require('node:assert/strict');
+const {SpeechRuntime}=require('../dist/main/speech');
+const root=path.resolve(__dirname,'..'),runtime=new SpeechRuntime(path.join(root,'speech-runtime'),()=> 'Calendar events and tasks.');
+(async()=>{try{console.log(await runtime.start());const wav=fs.readFileSync('test-results/voice-command.wav');let pcm;for(let at=12;at+8<wav.length;){const size=wav.readUInt32LE(at+4);if(wav.toString('ascii',at,at+4)==='data'){pcm=wav.subarray(at+8,at+8+size);break;}at+=8+size+(size%2);}assert.ok(pcm);const buffer=pcm.buffer.slice(pcm.byteOffset,pcm.byteOffset+pcm.byteLength);console.log(await runtime.transcribe({pcm:buffer,final:false}));const final=await runtime.transcribe({pcm:buffer,final:true});console.log(final);assert.match(final.text,/exam.*Friday/i);}finally{runtime.stop();}})().catch(error=>{console.error(error);console.log(runtime.status);process.exitCode=1;});
