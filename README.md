@@ -110,7 +110,7 @@ If the planner model is not downloaded, install Ollama and run this once:
 ollama pull qwen3.5:4b
 ```
 
-Download the installer from [Releases](https://github.com/opw-web/MyMind/releases), run it, and open **MYMIND** from the Windows Start menu. The running window appears on the taskbar. Updates preserve planner data.
+Download the **MSI installer** from [Releases](https://github.com/opw-web/MyMind/releases), run it, and open **MYMIND** from the Windows Start menu. The running window appears on the taskbar. Planner data lives separately from application files and survives updates.
 
 The installed app needs no terminal, Node installation, Python installation, or development server. Those tools are only needed to build the source.
 
@@ -195,6 +195,14 @@ npm run package
 ```
 
 This produces `release/MYMIND-Setup-1.1.0.exe`. The pinned electron-builder wrapper preserves Windows environment variables for the temporary NSIS helper and can use the builder's own static uninstaller reader if Windows cannot spawn that helper. It changes no system security settings.
+
+Build the Windows Installer package used by the release:
+
+```powershell
+npm run package:msi
+```
+
+This produces `release/MYMIND-Setup-1.1.0.msi`. On the development PC, application control blocked a rebuilt NSIS EXE, while standard Windows Installer successfully installed the MSI and its payload matched the latest build. The WiX build skips its administrator-dependent ICE validation because that validation service is unavailable under the local policy; the package is verified by actual installation and application tests. No system policy is disabled or changed.
 
 | Directory | Purpose |
 | --- | --- |

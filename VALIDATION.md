@@ -25,3 +25,6 @@ Windows packaging uses `scripts/package.cjs` with the pinned electron-builder ve
 - The real model created/deleted an event, created/deleted a task, completed/reopened a task, and Undo restored both deletions.
 - All 13 unit tests, type checks, production build, and updated desktop interaction checks passed.
 - Microphone tests use synthetic audio through Chromium's fake input device; they do not record ambient audio. Physical microphone selection/access remains dependent on the user's Windows configuration.
+- Installed 1.1 lifecycle verification passed with both workers loaded: closing during inference cleared owned processes in 154 ms, and forced main-process termination cleared them in 77 ms. Both private ports closed; the independent Ollama server remained alive.
+- The public repository's Windows GitHub Actions run passed type checks, the 13 tests and the production build.
+- The final MSI installer completed with exit code 0 and its installed `app.asar` matched the latest packaged payload by SHA-256. A rebuilt NSIS EXE was blocked by Windows application control, so the release uses standard Windows Installer instead. No security settings were changed.

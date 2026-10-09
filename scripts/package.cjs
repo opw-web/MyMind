@@ -16,4 +16,5 @@ WineVmManager.prototype.execWine=async function(input){
     return '';
   }
 };
-build({targets:Platform.WINDOWS.createTarget('nsis',Arch.x64)}).catch(error=>{console.error(error);process.exit(1);});
+const target=process.argv[2]==='msi'?'msi':'nsis';
+build({targets:Platform.WINDOWS.createTarget(target,Arch.x64)}).catch(error=>{console.error(error);process.exit(1);});

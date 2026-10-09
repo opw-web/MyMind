@@ -16,7 +16,8 @@
     "test:lifecycle": "node tests/lifecycle.cjs",
     "icon": "node scripts/icon.cjs",
     "build:speech": ".speech-env\\Scripts\\python.exe scripts/build-speech.py",
-    "package": "npm run build && node scripts/package.cjs"
+    "package": "npm run build && node scripts/package.cjs",
+    "package:msi": "npm run build && node scripts/package.cjs msi"
   },
   "dependencies": {
     "koffi": "3.3.2",
@@ -46,6 +47,7 @@
     "asarUnpack": ["node_modules/koffi/**/*"],
     "extraResources": [{"from":"speech-runtime","to":"speech"},{"from":"assets/third-party","to":"licenses"}],
     "win": { "target": "nsis", "icon": "assets/icon.ico" },
+    "msi": {"oneClick": false, "perMachine": false, "createDesktopShortcut": false, "createStartMenuShortcut": true, "runAfterFinish": false, "shortcutName": "MYMIND", "additionalLightArgs": ["-sval"], "artifactName": "MYMIND-Setup-${version}.msi"},
     "nsis": {
       "oneClick": false,
       "perMachine": false,
