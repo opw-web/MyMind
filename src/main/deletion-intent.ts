@@ -1,15 +1,18 @@
 import {isDate,shiftDate} from '../shared/dates';
 import {Change,Entity,Snapshot} from '../shared/model';
 
-type DeletionTarget={entity:Entity;id:string;title:string};
+export type DeletionTarget={entity:Entity;id:string;title:string};
 type DeleteChange=Change&{action:'delete';id:string};
-type DeletionPlan={changes:DeleteChange[];companions:string[];explain:boolean}|{question:string};
+export type DeletionPlan={changes:DeleteChange[];companions:string[];explain:boolean}|{question:string};
 type DeletionDecision={target:DeletionTarget;remove:boolean;order:number};
+export type ResolveDescription=(source:string,description:string,operation:'delete'|'keep',pool:DeletionTarget[])=>DeletionTarget|undefined;
 
 const deleteVerb='delete|remove|erase';
 const keepVerb=`keep|leave|spare|(?:do not|don['’]t|never)\\s+(?:${deleteVerb})|except|not`;
-const deletionCommand=new RegExp(`^(?:${deleteVerb})\\b`,'i');
-const command=new RegExp(`^(${deleteVerb}|${keepVerb})\\b`,'i');
+const deletionCommand=new RegExp(`^(?:just\\s+)?(?:${deleteVerb})\\b`,'i');
+const command=new RegExp(`^((?:just\\s+)?(?:${deleteVerb})|${keepVerb})\\b`,'i');
+const emphasis=new RegExp(`^just\\s+(?:${deleteVerb})(?:\\s+(?:it|them))?$`,'i');
+const repeat=/^do the same (?:with|for|to)\s+/i;
 const prefix=/^(?:yeah|yes|ok(?:ay)?|actually|you know what|also|please|you can|(?:can|could|would) you|i (?:want|need|would like) you to|completely|just|instead)(?:\s+|$)/i;
 const advice=/^(?:why|how|what|when|where|who|explain|walk me through|tell me|help me understand)\b/i;
 const otherCommand=/^(?:add|create|schedule|remind|put|make|record|submit|i (?:need|have|want) to|move|reschedule|update|change|rename|recolor|categorize|organize|mark|complete|reopen|set|tick|uncheck|check off|restore|undo|bring)\b/i;
@@ -18,19 +21,34 @@ const keepSuffix=/\s+(?:as an? (?:independent|standalone) event|unchanged)$/i;
 const pointer=/^(?:it|them|selected|(?:the )?selected (?:one|item)|(?:this|that|these|those)(?: (?:one|ones|item|items|tasks?|events?|sessions?))?)$/i;
 const typeWords:Record<string,Entity>={task:'task',tasks:'task',event:'event',events:'event',session:'event',sessions:'event',project:'project',projects:'project',section:'section',sections:'section',category:'category',categories:'category'};
 const kind='tasks?|(?:calendar )?(?:events?|sessions?)|projects?|sections?|categor(?:y|ies)';
+const inlineCommand=new RegExp(`(\\b(?:${kind}|blocks?))\\s+(?=(?:(?:just\\s+)?(?:${deleteVerb})|${keepVerb}|do the same (?:with|for|to))\\b)`,'gi');
+const trailingEmphasis=new RegExp(`\\s+(?=just\\s+(?:${deleteVerb})(?:\\s+(?:it|them))?(?:\\s+(?:and|but|then)\\b|\\s*[,.;!?\\n]|$))`,'gi');
 const leadingKind=new RegExp(`^(${kind})(?:\\s+(?:(named|called|titled)\\s+)?|$)`,'i');
 const trailingKind=new RegExp(`(?:^|\\s+)(${kind})$`,'i');
 const normalize=(text:string)=>text.normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'").replace(/[^\p{L}\p{N}']+/gu,' ').trim();
 const alias=(text:string)=>normalize(text).replace(/^(?:the\s+)?apply for\s+|^(?:the|a|an)\s+/,'');
+const digitWords=['zero','one','two','three','four','five','six','seven','eight','nine'];
+const spokenWords=(text:string)=>alias(text).split(' ').map(word=>{
+  const digit=digitWords.indexOf(word);
+  return digit===-1?word:String(digit);
+});
+function matchesDictation(name:string,title:string):boolean{
+  const a=spokenWords(name),b=spokenWords(title);
+  if(a.join(' ')===b.join(' '))return true;
+  const [short,long]=a.length<b.length?[a,b]:[b,a];
+  if(long.length!==short.length+1)return false;
+  const index=short.findIndex((word,i)=>word!==long[i]);
+  return index!==-1&&short[index]===long[index]+long[index+1]&&short.slice(index+1).join(' ')===long.slice(index+2).join(' ');
+}
 const unquote=(text:string)=>text.replace(/^["“]([^"”]+)["”]$/,'$1');
 const targetKey=(target:DeletionTarget)=>`${target.entity}:${target.id}`;
 
 function clauses(text:string):string[]{
   const quoted:string[]=[];
   const protectedText=text.replace(/["“][^"”]+["”]/g,match=>`\u0001${quoted.push(match)-1}\u0002`);
-  return protectedText.split(/[,.;!?\n]+|\b(?:and|but|then)\b|(?=\b(?:except|or)\b)/i).map(part=>{
+  return protectedText.replace(inlineCommand,'$1,').replace(trailingEmphasis,',').split(/[,.;!?\n]+|\b(?:and|but|then)\b|(?=\b(?:except|or)\b)/i).map(part=>{
     let clause=part.trim();
-    while(prefix.test(clause))clause=clause.replace(prefix,'');
+    while(prefix.test(clause)&&!emphasis.test(clause))clause=clause.replace(prefix,'');
     return clause.replace(/\u0001(\d+)\u0002/g,(_match,index)=>quoted[Number(index)]);
   }).filter(Boolean);
 }
@@ -42,10 +60,10 @@ export function hasExplicitDeletion(text:string):boolean{
 
 export function refersOnlyToDeletedItem(text:string):boolean{
   const [clause,...rest]=clauses(text);
-  return !!clause&&!rest.length&&/^(?:delete|remove|erase)\s+(?:it|(?:this|that)(?: item)?)$/i.test(clause);
+  return !!clause&&!rest.length&&/^(?:just\s+)?(?:delete|remove|erase)\s+(?:it|(?:this|that)(?: item)?)$/i.test(clause);
 }
 
-export function planDeletion(text:string,snapshot:Snapshot,items:DeletionTarget[],today:string,selected:DeletionTarget|undefined,references:string[],selectionUnavailable=false):DeletionPlan{
+export function planDeletion(text:string,snapshot:Snapshot,items:DeletionTarget[],today:string,selected:DeletionTarget|undefined,references:string[],selectionUnavailable=false,resolveDescription?:ResolveDescription):DeletionPlan{
   const decisions=new Map<string,DeletionDecision>();
   const linked=new Map<string,{remove:boolean;order:number;requiresTaskDeletion:boolean}>();
   const companions:string[]=[];
@@ -53,6 +71,7 @@ export function planDeletion(text:string,snapshot:Snapshot,items:DeletionTarget[
   const plannerItems=items.filter(item=>item.entity==='task'||item.entity==='event');
   let operation:'delete'|'keep'|undefined;
   let group:DeletionTarget[]=[],priorGroup:DeletionTarget[]=[];
+  const groupLinks=new Set<string>();
   const externalRefs=selected?[selected]:selectionUnavailable?[]:plannerItems.filter(item=>references.includes(item.id));
   const localRefs=()=>group.length?group:priorGroup;
 
@@ -81,7 +100,9 @@ export function planDeletion(text:string,snapshot:Snapshot,items:DeletionTarget[
     const typed=leading?.[2]?leading:trailing??leading;
     const scope=typed?typeWords[typed[1].toLowerCase().replace(/^calendar /,'')]:standalone?'event':forced;
     if(forced&&scope!==forced||standalone&&scope!=='event')return [];
-    const many=!!bulk||!!typed&&/(?:s|ies)$/i.test(typed[1]);
+    const plural=!!typed&&/(?:s|ies)$/i.test(typed[1]);
+    const both=!!bulk&&/^both\s/i.test(bulk[0]);
+    const many=!!bulk&&!both||plural;
     const withoutKind=typed?(typed===trailing?subject.slice(0,trailing.index):subject.slice(typed[0].length)):subject;
     const name=withoutKind.trim().replace(/\s+(?:one|ones)$/i,'');
     const pool=items.filter(item=>(scope?item.entity===scope:item.entity==='event'||item.entity==='task')&&(!standalone||snapshot.events.some(event=>event.id===item.id&&!event.linkedTaskId))&&(!date||(
@@ -94,17 +115,33 @@ export function planDeletion(text:string,snapshot:Snapshot,items:DeletionTarget[
       const related=operation==='keep'&&scope==='task'?snapshot.events.filter(event=>refs.some(ref=>ref.entity==='event'&&ref.id===event.id)).map(event=>event.linkedTaskId):[];
       const candidates=(!name&&bulk&&scope||!selectionUnavailable&&!refs.length&&date&&scope)?pool:pool.filter(item=>refs.some(ref=>targetKey(ref)===targetKey(item))||related.includes(item.id));
       if(!candidates.length)throw new Error('Which planner item do you mean? Give me its exact name or select its card.');
-      return disambiguate(candidates,many||/^both$/i.test(name));
+      if(both&&candidates.length!==2)throw new Error('Which two planner items do you mean?');
+      return disambiguate(candidates,many||both||/^both$/i.test(name));
     }
     const exact=[...new Set([...direct(name,scope),...(typed?direct(subject,scope):[])])].filter(item=>pool.includes(item));
     const leadingTitleAlias=!forced&&leading&&!trailing&&!bulk&&!date&&plannerItems.filter(item=>alias(item.title)===alias(subject));
-    if(exact.length)return disambiguate([...new Set([...exact,...(leadingTitleAlias||[])])],many);
+    const resolveNamed=(matches:DeletionTarget[])=>{
+      if(both&&plural&&matches.length!==2)throw new Error(`Which two planner items matching “${phrase}” do you mean?`);
+      return disambiguate(matches,many);
+    };
+    if(exact.length)return resolveNamed([...new Set([...exact,...(leadingTitleAlias||[])])]);
     const phraseAlias=alias(unquote(name));
     const aliases=[...new Set([...pool.filter(item=>phraseAlias&&alias(item.title)===phraseAlias),...(leadingTitleAlias||[])])];
-    if(aliases.length)return disambiguate(aliases,many);
+    if(aliases.length)return resolveNamed(aliases);
+    if(name===unquote(name)){
+      const dictated=pool.filter(item=>matchesDictation(name,item.title));
+      if(dictated.length)return disambiguate(dictated);
+    }
     if(typed&&/\bsessions?$/i.test(typed[1])&&!standalone){
       const tasks=disambiguate(plannerItems.filter(item=>item.entity==='task'&&phraseAlias&&alias(item.title)===phraseAlias));
       if(tasks.length)return disambiguate(pool.filter(item=>snapshot.events.some(event=>event.id===item.id&&event.linkedTaskId===tasks[0].id)),many);
+    }
+    // A description can identify one already scoped item. Type, dates, bulk
+    // scope, quoted titles and pointers must be resolved by the parser itself.
+    const description=leading&&leading===typed&&name.match(/^(?:about|for|where)\s+(.+)$/i)?.[1];
+    if(resolveDescription&&description&&operation&&!many&&!date&&!standalone&&!name.includes('"')&&!name.includes('“')&&(scope==='task'||scope==='event')){
+      const target=resolveDescription(phrase,description,operation,pool);
+      if(target&&pool.includes(target))return [target];
     }
     return [];
   };
@@ -116,41 +153,66 @@ export function planDeletion(text:string,snapshot:Snapshot,items:DeletionTarget[
     const requireTarget=()=>{if(awaitingTarget)throw new Error(`Which planner item did you mean to ${operation==='keep'?'keep':'delete'}?`);};
     for(const [order,raw] of fragments.entries()){
       if(/^or\b/i.test(raw)&&operation!=='keep')throw new Error(`Which deletion target did you mean instead of “${raw}”?`);
-      const fragment=raw.replace(/^or\s+/i,'');
+      if(emphasis.test(raw)&&operation==='delete'&&!awaitingTarget)continue;
+      const fragment=raw.replace(/^or\s+/i,'').replace(/\s+as well$/i,'');
+      const repeated=repeat.test(fragment);
+      const previous=repeated?group:[];
+      const repeatLinks=repeated&&groupLinks.size>0;
+      if(repeated){
+        requireTarget();
+        if(operation!=='delete'||!previous.length||repeatLinks&&(groupLinks.size!==previous.length||previous.some(item=>item.entity!=='task'||!groupLinks.has(item.id))))throw new Error('Which items and linked calendar events should I remove?');
+        priorGroup=previous;
+        group=[];
+        groupLinks.clear();
+        awaitingTarget=true;
+      }
       const action=command.exec(fragment);
       if(action){
         requireTarget();
         operation=deletionCommand.test(action[0])?'delete':'keep';
         if(group.length)priorGroup=group;
         group=[];
+        groupLinks.clear();
         awaitingTarget=true;
       }
-      const subject=(action?fragment.slice(action[0].length):fragment).trim();
+      const subject=(action?fragment.slice(action[0].length):fragment.replace(repeat,'')).trim();
       const phrase=operation==='keep'?subject.replace(keepSuffix,''):subject;
       if(!phrase||/^(?:the|a|an)$/i.test(phrase))continue;
-      if(!action&&advice.test(phrase)){requireTarget();operation=undefined;explain=true;continue;}
-      if(!action&&otherCommand.test(phrase)){
+      if(repeatLinks&&/(?:^only\s+|\s+only$)/i.test(phrase))throw new Error('Should I remove the task and its linked calendar events, or the task only?');
+      if(!action&&!repeated&&advice.test(phrase)){requireTarget();operation=undefined;explain=true;continue;}
+      if(!action&&!repeated&&otherCommand.test(phrase)){
         requireTarget();
         companions.push(phrase);operation=undefined;continue;
       }
       if(!operation)throw new Error(`Which planner change did you mean by “${phrase}”?`);
       const remove=operation==='delete';
-      const match=association.exec(phrase);
+      const inclusive=/^including\s+/i.test(phrase);
+      const match=!repeated&&association.exec(inclusive?phrase.replace(/^including\s+/i,''):phrase);
       if(match&&(match[1]||match[2]||match[3])){
         const reference=match[3];
-        const nearby=localRefs();
-        const tasks=(reference&&!pointer.test(reference)?resolve(reference,'task'):nearby.length?nearby:externalRefs).filter(item=>item.entity==='task');
+        const each=reference&&/^(?:each|both)(?:\s+of\s+(?:the|those|these))?\s+tasks?$/i.test(reference);
+        const nearby=inclusive||each?group:localRefs();
+        if((inclusive||each)&&!nearby.length)throw new Error('Which task are those calendar events associated with?');
+        const tasks=(reference&&!each&&!pointer.test(reference)?resolve(reference,'task'):nearby.length?nearby:externalRefs).filter(item=>item.entity==='task');
         if(!tasks.length)throw new Error('Which task are those calendar events associated with?');
-        for(const task of tasks)linked.set(task.id,{remove,order,requiresTaskDeletion:nearby.some(item=>targetKey(item)===targetKey(task))&&!!decisions.get(targetKey(task))?.remove});
+        for(const task of tasks){
+          linked.set(task.id,{remove,order,requiresTaskDeletion:nearby.some(item=>targetKey(item)===targetKey(task))&&!!decisions.get(targetKey(task))?.remove});
+          groupLinks.add(task.id);
+        }
         awaitingTarget=false;
         continue;
       }
-      const targets=resolve(phrase);
+      const repeatedKind=previous.length&&previous.every(item=>item.entity===previous[0].entity)?previous[0].entity:undefined;
+      const targets=resolve(phrase,repeatedKind);
       if(!targets.length)throw new Error(`I could not find a planner item matching “${phrase}”. Which item do you mean?`);
       awaitingTarget=false;
       for(const target of targets){
         if(!remove&&target.entity==='task'&&linked.get(target.id)?.requiresTaskDeletion)linked.delete(target.id);
         decisions.set(targetKey(target),{target,remove,order});
+        if(repeatLinks&&target.entity==='task'){
+          linked.set(target.id,{remove:true,order,requiresTaskDeletion:true});
+          groupLinks.add(target.id);
+        }
       }
       group.push(...targets);
     }

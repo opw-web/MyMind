@@ -84,6 +84,27 @@ test('assistant drops unsolicited steps from native creates and preserves checkl
  }finally{s.db.close();}
 });
 
+test('native previews preserve the user’s enumerated step wording on each dictated task',async()=>{
+ const text='First, I need to renew my passport; the first step is find the application form, and the second step is gather two passport photos. Next, I need to book a dentist appointment, with one step to call the clinic and another step to confirm the appointment time. Also add a task to submit the conference abstract; its steps are revise the opening paragraph, check the word count, and upload the final document. Add a task called Review travel insurance.';
+ const s=setup([tool('stage_changes',{changes:[
+  {action:'create',entity:'task',id:'passport',title:'Renew Passport',kind:'planned',steps:[{title:'Find application form'}]},
+  {action:'create',entity:'task',id:'dentist',title:'Book Dentist Appointment',steps:[{title:'Call clinic'},{title:'Confirm appointment time'}]},
+  {action:'create',entity:'task',id:'abstract',title:'Submit Conference Abstract',steps:[{title:'Revise opening paragraph'},{title:'Check word count'},{title:'Upload final document'}]},
+  {action:'create',entity:'task',id:'insurance',title:'Review travel insurance',steps:[{title:'Invented step'}]}
+ ]}),tool('preview_changes',{}),answer('Review your preview.')]);
+ try{
+  const result=await s.assistant.chat({text,requestId:'dictated-step-wording'});
+  assert.ok(result.preview,result.content);
+  assert.equal(s.db.revision,0);
+  const draft=result.preview.draft;
+  assert.deepEqual(Object.fromEntries(draft.projectedSnapshot.tasks.map(t=>[t.id,t.steps.map(step=>step.title)])),{
+   passport:['Find the application form','Gather two passport photos'],dentist:['Call the clinic','Confirm the appointment time'],
+   abstract:['Revise the opening paragraph','Check the word count','Upload the final document'],insurance:[]
+  });
+  assert.equal(draft.projectedSnapshot.events.length,0);
+ }finally{s.db.close();}
+});
+
 test('legacy standalone completion requests preserve the activity without completion semantics',async()=>{
  const s=setup([]);try{
   s.db.mutate({changes:[{action:'create',entity:'event',id:'meeting',fields:{title:'Team meeting',startDate:'2026-10-13'}}],label:'Fixture',expectedRevision:0,requestId:'fixture'});

@@ -846,7 +846,7 @@
     },
     {
       "id": "readme_runtime_context",
-      "label": "Requested 16K context and verified active runtime context",
+      "label": "Requested 32K context and verified active runtime context",
       "file_type": "rationale",
       "source_file": "README.md",
       "source_location": "Appearance and local model",
@@ -855,7 +855,7 @@
       "author": null,
       "contributor": null,
       "_origin": "semantic",
-      "rationale": "The default 4B planner uses a measured short sampling profile at requested 16K; Settings reports actual active context and memory cost."
+      "rationale": "The default 4B planner uses a measured short sampling profile at requested 32K. Settings reports actual active context and memory cost."
     },
     {
       "id": "readme_dictation",
@@ -939,7 +939,8 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "_origin": "semantic"
+      "_origin": "semantic",
+      "rationale": "Five fresh trials per workflow check exact preview, Apply and Undo. The same fixtures compare 16K and 32K and report model digest, GPU residency and warm latency."
     },
     {
       "id": "docs_product_brief_document",
@@ -1098,6 +1099,22 @@
       "file_type": "concept",
       "source_file": "docs/legacy/README.md",
       "source_location": "L5",
+      "_origin": "semantic"
+    },
+    {
+      "id": "readme_qwen_release_gate",
+      "label": "Repeated Qwen acceptance checks in disposable databases",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "L68",
+      "_origin": "semantic"
+    },
+    {
+      "id": "readme_electron_package",
+      "label": "Electron MSI packaging and local speech prerequisites",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "L70",
       "_origin": "semantic"
     }
   ],
@@ -2060,12 +2077,34 @@
       "source_location": "L5",
       "weight": 1.0,
       "_origin": "semantic"
+    },
+    {
+      "source": "readme_document",
+      "target": "readme_qwen_release_gate",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L68",
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "readme_document",
+      "target": "readme_electron_package",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L70",
+      "weight": 1.0,
+      "_origin": "semantic"
     }
   ],
   "hyperedges": [],
   "source_hashes": {
     ".github/workflows/checks.yml": "6e5ef642d7aff3ac6c17a1e13cbd60ba3cff26212cb7e7dd0a6cc118e4c0e975",
-    "README.md": "cb2a7f6a650c53f1f4dc3fbe3e5a61753aceb9becc53a397b6dec3e35a5d7a50",
+    "README.md": "5c17b09a188b945a19b196e50fcdb80db9cbc6a2841dd7b7b5cc696042e146cd",
     "THIRD_PARTY_NOTICES.md": "14d4a7b4613fe094570640fa75b2839022fcba7fe426b0da9428bc5caac98dda",
     "VALIDATION.md": "16dd4643aec3c811dcdae1113807559292aa73f4e173f6f5a98810dc81465305",
     "assets/icon.png": "43fa89f5307c75d9741d164dff73350be7f089a5998545643348b869662797b1",

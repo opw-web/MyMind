@@ -20,6 +20,7 @@ import {CalendarSessionDraft,applyCalendarIntent} from './calendar-intent';
 import {extractProjectWorkflow,requestsNewProject,requestsProjectWorkflow} from './project-workflow';
 import {groupingChanges,PlannerReference,ProjectGroupingIntent,projectGroupingIntent,ReferenceGroup,rememberGroup,resolveGroupingTasks,validateGrouping} from './project-grouping';
 import {planDeletion,refersOnlyToDeletedItem} from './deletion-intent';
+import {resolveDeletion} from './deletion-resolution';
 
 export const ASSISTANT_TOOLS=toolDefinitions(true);
 const inputSchema=z.object({text:z.string().trim().min(1),requestId:z.string().min(1).max(100),clarificationIssueId:z.string().min(1).optional(),selection:z.object({entity:z.enum(['event','task']),id:z.string(),revision:z.number().int(),entryType:z.enum(['session','deadline']).optional(),draftId:z.string().optional(),draftVersion:z.number().int().optional()}).optional()}).strict();
@@ -200,7 +201,7 @@ Current records include ${pendingDraft?'pending proposals (not saved)':'saved re
       }
       const currentDraft=this.getDraft();
       const blockedScope=this.pendingDeletion?.draftId===currentDraft?.id&&currentDraft?.unresolved.some(issue=>issue.id===this.pendingDeletion?.issueId)?this.pendingDeletion:undefined;
-      let deletion=allowed.has('delete')?planDeletion(text,snapshot,items,today,selected,this.references,!!input.selection&&!selected):undefined;
+      let deletion=allowed.has('delete')?await resolveDeletion(this.runtime,text,signal,resolveDescription=>planDeletion(text,snapshot,items,today,selected,this.references,!!input.selection&&!selected,resolveDescription)):undefined;
       let resolvedDeletionIssueId:string|undefined;
       if(blockedScope&&deletion&&!('question'in deletion)){
         if(/^\s*(?:please\s+)?instead[,\s]+(?:delete|remove|erase)\b/i.test(text)){
@@ -234,39 +235,17 @@ Current records include ${pendingDraft?'pending proposals (not saved)':'saved re
         blockExistingDeletionPreview(question);
         return done(`${question} No changes saved.`);
       }
-      const expectedCreations=companionCreations?.flatMap(result=>result&&'change'in result?[result.change]:[])??[];
-      const authorizedDeletes=new Set(deletion?.changes.map(change=>`${change.entity}:${change.id}`));
-      if(authorizedDeletes.size&&expectedCreations.length){
-        const issueId=blockExistingDeletionPreview('Finish the combined request or replace it by starting with “Instead, delete…”.');
-        resolvedDeletionIssueId??=issueId;
-      }
+      const verifiedCreations=companionCreations?.flatMap(result=>result&&'change'in result?[{...result.change,id:randomUUID()}]:[])??[];
       contextTrimmed=context.trimmed;
       const messages:any[]=context.messages,currentInput=messages.at(-1),historyGroups=[...context.historyGroups],seen=new Set<string>(known.map(i=>i.id)),fullRecords=new Set<string>();
-      if(expectedCreations.length)messages[0].content+=`\nThe application already resolved and will stage these deletions together with the additions: ${JSON.stringify(deletion!.changes)}. Stage only these requested creations, including the specified dates, and preview them as one batch: ${JSON.stringify(expectedCreations)}.`;
       let staged:Change[]=[],stageFailure=false,lastError='',actionCorrections=0;
       const taskKeys=new Map<string,string>();
       const taskSources=new Map<string,string[]>();
       const toolHistory:ModelMessage[]=[];
       const turnTargets=new Set<string>();
       let groupingBatch:{tasks:Snapshot['tasks'];projectId:string}|undefined;
-      const completeDeletionBatch=(changes:Change[])=>{
-        if(!deletion)return;
-        const creations=changes.filter(change=>change.action==='create'&&change.entity!=='category');
-        const remaining=[...creations];
-        for(const expected of expectedCreations){
-          const index=remaining.findIndex(actual=>actual.entity===expected.entity&&Object.entries(expected.fields??{}).every(([field,value])=>{
-            const actualValue=actual.fields?.[field];
-            return field==='title'?String(actualValue).trim().toLowerCase()===String(value).trim().toLowerCase():
-              (actualValue??(field==='endDate'?actual.fields?.startDate:null))===value;
-          }));
-          if(index<0)throw new Error(`Stage the requested addition “${expected.fields?.title}” with its specified date before previewing the whole batch.`);
-          remaining.splice(index,1);
-        }
-        if(remaining.length)throw new Error('The deletion batch contains an addition the user did not request.');
-      };
       const commit=(changes:Change[],issues:DraftIssue[]=[],requestQuestions:{issueId:string;context:RequestQuestion}[]=[])=>{
         groundExplicitTaskDeadlines(text,changes);
-        completeDeletionBatch(changes);
         if(groupingBatch)validateGrouping(changes,groupingBatch.tasks,groupingBatch.projectId);
         if(!groupingBatch&&allowed.has('create')&&requestsNewProject(text)){
           const projects=changes.filter(c=>c.entity==='project'&&c.action==='create');
@@ -413,7 +392,7 @@ Current records include ${pendingDraft?'pending proposals (not saved)':'saved re
       if(entity)targets=targets.filter(i=>i.entity===entity);
       if(onDay)targets=targets.filter(i=>'startDate'in i?i.startDate<=onDay&&i.endDate>=onDay:'dueDate'in i&&(i.dueDate===onDay||snapshot.events.some(e=>e.linkedTaskId===i.id&&e.kind==='planned'&&e.startDate<=onDay&&e.endDate>=onDay)));
       if(deletion){
-        if(!expectedCreations.length)commit(deletion.changes);
+        commit([...deletion.changes,...verifiedCreations]);
       }
       else if(!targets.length&&!selected&&!this.references.length&&!allowed.has('create')&&itemPointer.test(text)&&allowed.has('update'))return done('Which planner item do you mean? Give me its name or select its card. No changes saved.');
       else if(allowed.size===1&&allowed.has('restore')&&/\bundo\b/i.test(text)&&this.lastReceipt){
@@ -567,18 +546,15 @@ Current records include ${pendingDraft?'pending proposals (not saved)':'saved re
                 inputChanges={changes:scheduled.flatMap(t=>[{action:'create',entity:'task',id:taskKeys.get(t.key)!,title:t.title,dueDate:t.dueDate,steps:t.steps.map(title=>({title})),dependsOnIds:t.prerequisiteKeys.map(key=>{const id=taskKeys.get(key)??(seen.has(key)?key:undefined);if(!id)throw new Error(`Unknown prerequisite key: ${key}. Use a task key from this request or a verified existing ID.`);return id;}),categoryTitle:t.categoryTitle,notes:t.notes??''},...t.sessions.map((session,index)=>({action:'create',entity:'event',id:this.drafts.key(requestId,`session:${t.key}:${index}`),title:t.title,...session,endDate:session.endDate??session.startDate,kind:'planned',linkedTaskId:taskKeys.get(t.key)}))])};
               }
               const raw=z.object({changes:z.array(z.record(z.string(),z.unknown())).min(1).max(100)}).strict().parse(inputChanges);
-              const parsed=raw.changes.flatMap(c=>{
+              const parsed=raw.changes.map(c=>{
                 const {action,entity,id,fields,...flat}=c;
-                if(action==='delete'){
-                  const identity=changeSchema.parse({action,entity,id});
-                  if(!authorizedDeletes.has(`${identity.entity}:${identity.id}`))throw new Error('That deletion does not match a verified item the user requested.');
-                  if(fields!==undefined)z.record(z.string(),z.unknown()).parse(fields);
-                  // A model may echo record fields. Use the verified deletion from the plan.
-                  return [];
-                }
-                return [changeSchema.parse({action,entity,...(id?{id}:{}),fields:{...(fields?z.record(z.string(),z.unknown()).parse(fields):{}),...flat}})];
+                if(action==='delete')throw new Error('Deletion targets must be resolved from the user’s request.');
+                const stagedFields={...(fields?z.record(z.string(),z.unknown()).parse(fields):{}),...flat};
+                // The native tool shares an event/task schema. A model may echo
+                // the event default on a new task, which has no activity kind.
+                if(name==='stage_changes'&&action==='create'&&entity==='task'&&stagedFields.kind==='planned')delete stagedFields.kind;
+                return changeSchema.parse({action,entity,...(id?{id}:{}),fields:stagedFields});
               });
-              if(deletion&&parsed.some(change=>change.action!=='create'||!expectedCreations.some(expected=>expected.entity===change.entity)))throw new Error('Only the requested additions can accompany these deletions.');
               if(sessionAnswer&&parsed.some(change=>change.entity!=='category'&&(change.entity!=='event'||change.action==='delete')))throw new Error('Answer the session question with a linked planned event. Leave the task and its deadline unchanged.');
               enforceRequestedSteps(parsed,text,snapshot,taskSources);
               for(const c of parsed){
@@ -595,7 +571,7 @@ Current records include ${pendingDraft?'pending proposals (not saved)':'saved re
                   if(duplicates.length>1&&selected?.id!==c.id&&!/\b(all|both|every)\b/i.test(text)&&!(this.references.length===1&&this.references[0]===c.id&&itemPointer.test(text))&&!(qualified.length===1&&qualified[0].id===c.id))return done(`I found ${duplicates.length} ${target.entity}s called “${target.title}”. Which one do you mean? No changes saved.`,toolHistory);
                 }
               }
-              const validated=this.drafts.prepare(draftTurn,staged,[...parsed,...(deletion?.changes??[])]);staged=validated.changes;stageFailure=false;
+              const validated=this.drafts.prepare(draftTurn,staged,parsed);staged=validated.changes;stageFailure=false;
               staged.forEach(c=>{if(c.id)seen.add(c.id);});
               result={staged:true,saved:false,draft:staged.filter(c=>c.entity!=='category').map(c=>({action:c.action,entity:c.entity,id:c.id,...c.fields})),next:'Review the draft against the full request: dates, prerequisites, steps and corrections. Repair it if needed, then preview_changes.'};
             }else if(name==='preview_changes'||name==='commit_changes'||name==='finish_request'){
@@ -610,7 +586,7 @@ Current records include ${pendingDraft?'pending proposals (not saved)':'saved re
               result={saved:false,preview:commit(staged),taskCount:staged.filter(c=>c.entity==='task'&&c.action==='create').length,updatedTasks:staged.filter(c=>c.entity==='task'&&c.action==='update').map(c=>this.drafts.snapshot().tasks.find(t=>t.id===c.id))};staged=[];
               // A successful edit needs no further inference unless the user
               // also requested an explanation. Answer from the saved preview.
-              if(deletion&&!deletion.explain||preview!.draft.items.some(i=>i.entity==='project'&&i.action==='create')&&!/\b(explain|how|why|what|walk me through|tell me about|help me understand|unclear|unsure|uncertain|clarify)\b|\bnot sure\b/i.test(text)){
+              if(preview!.draft.items.some(i=>i.entity==='project'&&i.action==='create')&&!/\b(explain|how|why|what|walk me through|tell me about|help me understand|unclear|unsure|uncertain|clarify)\b|\bnot sure\b/i.test(text)){
                 toolHistory.push({role:'assistant',content:`Proposed preview (not saved): ${JSON.stringify(preview)}`});
                 return done(previewReply(preview!),toolHistory);
               }

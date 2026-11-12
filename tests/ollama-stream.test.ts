@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {OllamaRuntime} from '../src/main/ollama';
 
-test('fresh settings use the installed Qwen 4B profile with a 16K context',()=>{
+test('fresh settings use the installed Qwen 4B profile with a 32K context',()=>{
   const runtime=new OllamaRuntime(()=>{});
   try{
     assert.equal(runtime.model,process.env.MYMIND_MODEL||'qwen3.5:4b');
-    assert.equal(runtime.modelOptions.num_ctx,16384);
-    assert.equal(runtime.status.context,16384);
+    assert.equal(runtime.modelOptions.num_ctx,32768);
+    assert.equal(runtime.status.context,32768);
   }finally{runtime.stop();}
 });
 

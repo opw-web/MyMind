@@ -28,7 +28,7 @@ Settings offers **Light**, **Dark** and **System**. Light preserves the approved
 
 The model picker lists only installed local Ollama library weights with verified completion and tool support. hf.co, remote/cloud and unreadable/ineligible models are hidden; no model is removed or downloaded by MYMIND. An unavailable saved model is explained and Settings remains available to choose an eligible replacement. MYMIND never silently switches models.
 
-The default is **qwen3.5:4b**, with a requested **16,384-token context**. Its regular planner turns use temperature 0.2, thinking off and a 2,048-token output cap. Settings can select other eligible models and reports the verified active context used by the assistant's budget. Larger windows use more memory. See the verification record for the Qwen 4B sampling comparison.
+The default is **qwen3.5:4b**, with a requested **32,768-token context**. Its regular planner turns use temperature 0.2, thinking off and a 2,048-token output cap. Settings can select other eligible models and reports the verified active context used by the assistant's budget. Larger windows use more memory. See the verification record for the Qwen 4B sampling comparison.
 
 ## Local voice
 
@@ -59,12 +59,12 @@ node tests/preview-review-desktop.cjs
 node tests/appearance-desktop.cjs
 node tests/deadline-desktop.cjs
 node tests/text-box-desktop.cjs
-npm run test:qwen4 -- --release-gate --profile=baseline
-npm run test:qwen4 -- --release-gate --profile=short
+npm run test:qwen4 -- --release-gate --profile=deployed --model=qwen3.5:4b --context=16384
+npm run test:qwen4 -- --release-gate --profile=deployed --model=qwen3.5:4b --context=32768
 npm run graphify:build
 npm run graphify:check
 ```
 
-The Qwen 4B release gate repeats the verbatim deletion five times and each independent workflow three times. It uses real inference where the workflow needs it and checks exact outcomes, zero writes before Apply, and Undo restoration in isolated databases. Both profiles use the same fixtures and report the installed model digest, active context, tool calls and timings. The older `test:model` commands remain the historical 9B comparison. Native tests use isolated data and deterministic Ollama or speech boundaries where stated.
+The Qwen release gate runs each workflow five times, including the verbatim deletion, a semantic deletion that requires inference, and a long dictation. It checks exact outcomes, zero writes before Apply, and Undo restoration in isolated databases. Both context sizes use the same fixtures and report the installed model digest, active context, GPU residency, tool calls and warm latency. The older `test:model` commands remain the historical 9B comparison. Native tests use isolated data and deterministic Ollama or speech boundaries where stated.
 
 To rebuild speech, create `.speech-env`, install `speech/requirements.lock.txt`, then `npm run build:speech`. Packaging commands are `npm run package` or `npm run package:msi`. No installer/deployment is implied by passing development checks. Historical [V1](docs/legacy/V1_README.md) and [V2](docs/V2_PLAN.md) documents retain earlier product history.

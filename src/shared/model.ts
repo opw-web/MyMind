@@ -1,6 +1,6 @@
 export const COLORS = ['coral', 'amber', 'sage', 'sky', 'lavender', 'rose'] as const;
 export const DEFAULT_ASSISTANT_MODEL = 'qwen3.5:4b';
-export const DEFAULT_ASSISTANT_CONTEXT = 16_384;
+export const DEFAULT_ASSISTANT_CONTEXT = 32_768;
 export type Color = typeof COLORS[number];
 export interface Categorized { categoryId: string | null; colorOverride: Color | null; }
 export interface Category { id: string; title: string; color: Color; semanticKey?: string; aliases?: string[]; }
