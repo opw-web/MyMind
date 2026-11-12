@@ -30,10 +30,10 @@ export function Icon({name,size=18}:{name:string;size?:number}) {
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]??paths.spark}</svg>;
 }
-export function Dialog({children,onClose,label}:{children:React.ReactNode;onClose:()=>void;label:string}) {
+export function Dialog({children,onClose,label,className}:{children:React.ReactNode;onClose:()=>void;label:string;className?:string}) {
   const ref=useRef<HTMLDialogElement>(null);
   useEffect(()=>{ref.current?.showModal();},[]);
-  return <dialog ref={ref} className="dialog" aria-label={label} onCancel={onClose} onClick={e=>{if(e.target===e.currentTarget){const b=e.currentTarget.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom)onClose();}}}>{children}</dialog>;
+  return <dialog ref={ref} className={className?`dialog ${className}`:'dialog'} aria-label={label} onCancel={onClose} onClick={e=>{if(e.target===e.currentTarget){const b=e.currentTarget.getBoundingClientRect();if(e.clientX<b.left||e.clientX>b.right||e.clientY<b.top||e.clientY>b.bottom)onClose();}}}>{children}</dialog>;
 }
 export function ColorPicker({value,onChange}:{value:Color;onChange:(value:Color)=>void}) { return <div className="color-picker" aria-label="Note color">{COLORS.map(color=><button type="button" key={color} className={`swatch color-${color} ${value===color?'selected':''}`} title={color} aria-label={`${color} color`} aria-pressed={value===color} onClick={()=>onChange(color)}>{value===color&&<Icon name="check" size={14}/>}</button>)}</div>; }
 

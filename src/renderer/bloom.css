@@ -65,8 +65,8 @@ dialog.dialog>form,.editor-form{display:flex;flex-direction:column;min-height:0;
 .dialog-heading h2,.dialog-title h2{font-family:'Bloom Pixel','Courier New',monospace;font-size:16px;letter-spacing:-.5px;color:var(--text-primary,#755549);font-weight:400}
 .editor-body,.dialog-body{padding:20px;overflow-y:auto;flex:1;min-height:0;scrollbar-color:var(--boundary,#e4cfc4) transparent}
 .dialog-footer{flex:0 0 auto;flex-wrap:wrap}
-.dialog-body label:not(.inline-check):not(.step-check):not(.cat-pick):not(.context-exact){display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:900;color:var(--text-primary,#84685c);letter-spacing:.2px;margin-bottom:14px}
-.dialog-body input:not([type=checkbox]):not([type=range]),.dialog-body textarea,.dialog-body select{width:100%;min-width:0;border:1px solid var(--boundary,#e5d5c9);background:var(--surface-soft,#fffefb);border-radius:8px;min-height:36px;padding:9px 10px;color:var(--text-primary,#6e5448);font-size:13px;font-weight:400}
+.dialog-body label:not(.inline-check):not(.step-check):not(.cat-pick):not(.context-exact){display:flex;flex-direction:column;gap:6px;font-size:var(--dialog-label-size,11px);font-weight:900;color:var(--text-primary,#84685c);letter-spacing:.2px;margin-bottom:14px}
+.dialog-body input:not([type=checkbox]):not([type=range]),.dialog-body textarea,.dialog-body select{width:100%;min-width:0;border:1px solid var(--boundary,#e5d5c9);background:var(--surface-soft,#fffefb);border-radius:8px;min-height:var(--dialog-field-height,36px);padding:9px 10px;color:var(--text-primary,#6e5448);font-size:var(--dialog-field-size,13px);font-weight:400}
 .dialog-body textarea{resize:vertical;min-height:68px}
 .dialog-body .inline-check{margin:0 0 14px}
 .form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
@@ -195,11 +195,66 @@ dialog.dialog>form,.editor-form{display:flex;flex-direction:column;min-height:0;
 .text-box-error button{margin-right:6px;padding:5px 8px;border:1px solid var(--boundary,#e7d8cc);border-radius:6px;background:var(--surface-soft,#fffcf8)}
 
 /* Settings */
-.context-control{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
-.context-heading{display:flex;align-items:center;justify-content:space-between}
-.context-heading output{font-size:18px;font-weight:900;color:var(--terracotta)}
-.context-scale{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted,#b49a8e)}
-.context-exact input{max-width:200px}
+dialog.settings-dialog {
+  --dialog-label-size: 16px;
+  --dialog-field-height: 44px;
+  --dialog-field-size: 16px;
+  --settings-padding: clamp(14px, 4vw, 28px);
+  display: none;
+  width: min(calc(100vw - 24px), 720px);
+  height: min(calc(100vh - 24px), 760px);
+  max-width: none;
+  max-height: none;
+}
+dialog.settings-dialog[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.settings-dialog .dialog-heading {
+  height: auto;
+  min-height: 0;
+  padding: 8px var(--settings-padding);
+}
+.settings-dialog .dialog-title h2 { font-size: 20px; }
+.settings-dialog .dialog-heading .icon-button { flex: 0 0 44px; width: 44px; height: 44px; }
+.settings-dialog .dialog-footer {
+  gap: 8px;
+  padding: 10px var(--settings-padding);
+}
+.settings-dialog .dialog-footer .btn { min-height: 44px; font-size: 15px; white-space: normal; }
+.settings-dialog :is(button, input, select):focus-visible {
+  outline: 2px solid var(--text-primary, var(--brown));
+  outline-offset: 2px;
+}
+.assistant-settings {
+  min-width: 0;
+  padding: 18px var(--settings-padding);
+  overscroll-behavior: contain;
+  scroll-padding: 12px;
+  overflow-wrap: anywhere;
+}
+.assistant-settings .form-hint {
+  color: var(--text-muted, #745a50);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.assistant-settings .form-error { font-size: 14px; line-height: 1.5; }
+.assistant-settings .inline-check { min-height: 44px; margin: 16px 0 0; font-size: 16px; }
+.assistant-settings .inline-check input { flex-shrink: 0; width: 20px; height: 20px; }
+.context-control { margin: 18px 0; }
+.context-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.context-heading output { font-size: 20px; font-weight: 900; color: var(--text-primary, var(--brown)); }
+.context-control input[type=range] { min-height: 44px; width: 100%; margin: 0; }
+.context-scale { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; color: var(--text-muted, #745a50); }
+.context-exact {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 12rem);
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary, #745a50);
+  font-size: var(--dialog-label-size);
+  font-weight: 800;
+}
 
 /* Day agenda + review */
 .plan-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--boundary,#eee3d9)}

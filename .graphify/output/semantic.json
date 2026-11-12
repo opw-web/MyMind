@@ -1153,6 +1153,94 @@
       "source_file": "README.md",
       "source_location": "L76",
       "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_document",
+      "label": "MYMIND migration progress",
+      "file_type": "document",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L1",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_source_versions",
+      "label": "Recovered Electron releases and Tauri source tag",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L7",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_native_upgrade",
+      "label": "Isolated Windows MSI upgrade, retained data, and rollback",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L8",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_smart_app_control",
+      "label": "Unsigned native Windows launch blocked by Smart App Control 4551",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L9",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_wsl_shortcut",
+      "label": "WSLg shortcut uses a separate planner copy",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L13",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_worker_shutdown",
+      "label": "Window close stops owned Ollama, speech, and WSL helpers",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L15",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_webkit_clipping",
+      "label": "WebKit Settings content clipped to a 40-pixel body",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L19",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_display_zoom",
+      "label": "WSL startup maximizes at 150 percent with persistent keyboard scaling",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L20",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_settings_layout",
+      "label": "Larger settings controls and an independently scrolling body",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L21",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_settings_regression",
+      "label": "WebKit geometry and smoke tests exercise visible Settings controls",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L26",
+      "_origin": "semantic"
+    },
+    {
+      "id": "docs_progress_shortcut_redeployment",
+      "label": "Verified rebuilt executable from the original WSL shortcut and saved rollback binary",
+      "file_type": "concept",
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L29",
+      "_origin": "semantic"
     }
   ],
   "edges": [
@@ -1581,10 +1669,10 @@
       "target": "design_authority",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "DESIGN.md",
       "source_location": "Bloom visual system",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1592,10 +1680,10 @@
       "target": "design_operating_surface",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "DESIGN.md",
       "source_location": "Operating surface",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1603,10 +1691,10 @@
       "target": "design_typography",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "DESIGN.md",
       "source_location": "Type and geometry",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1614,10 +1702,10 @@
       "target": "design_theme",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "DESIGN.md",
       "source_location": "Light, Dark and System",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1625,10 +1713,10 @@
       "target": "design_category_colors",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "DESIGN.md",
       "source_location": "Calendar and proposal states",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1636,10 +1724,10 @@
       "target": "design_preview",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "DESIGN.md",
       "source_location": "Calendar and proposal states",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1647,10 +1735,10 @@
       "target": "design_navigation",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "DESIGN.md",
       "source_location": "Calendar and proposal states",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1658,10 +1746,10 @@
       "target": "design_quality",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "DESIGN.md",
       "source_location": "Interaction quality",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1669,10 +1757,10 @@
       "target": "product_workspace",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": "Operating Context",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1680,10 +1768,10 @@
       "target": "product_independent_sessions",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": "Capabilities and Constraints",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1691,10 +1779,10 @@
       "target": "product_preview",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": "Capabilities and Constraints",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1702,10 +1790,10 @@
       "target": "product_completion",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": "Capabilities and Constraints",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1713,10 +1801,10 @@
       "target": "product_voice",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": "Capabilities and Constraints",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1724,10 +1812,10 @@
       "target": "product_settings",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": "Capabilities and Constraints",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1735,10 +1823,10 @@
       "target": "product_visual_authority",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": "Brand Commitments",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1746,10 +1834,10 @@
       "target": "product_isolated_verification",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": "Capabilities and Constraints",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1757,10 +1845,10 @@
       "target": "readme_workspaces",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Calendar and Tasks",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1768,10 +1856,10 @@
       "target": "readme_task_flow",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Calendar and Tasks",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1779,10 +1867,10 @@
       "target": "readme_independent_dates",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Calendar and Tasks",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1790,10 +1878,10 @@
       "target": "readme_completion_history",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Calendar and Tasks",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1801,10 +1889,10 @@
       "target": "readme_preview",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "AI preview and deliberate saving",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1812,10 +1900,10 @@
       "target": "readme_concurrency",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "AI preview and deliberate saving",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1823,10 +1911,10 @@
       "target": "readme_ephemeral_chat",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "AI preview and deliberate saving",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1834,10 +1922,10 @@
       "target": "readme_theme",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Appearance and local model",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1845,10 +1933,10 @@
       "target": "readme_qwen",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Appearance and local model",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1856,10 +1944,10 @@
       "target": "readme_runtime_context",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Appearance and local model",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1867,10 +1955,10 @@
       "target": "readme_dictation",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Local voice",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1878,10 +1966,10 @@
       "target": "readme_dictation_drafts",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Local voice",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1889,10 +1977,10 @@
       "target": "readme_spoken_replies",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Local voice",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1900,10 +1988,10 @@
       "target": "readme_planner_sqlite",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Storage and lifecycle",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1911,10 +1999,10 @@
       "target": "readme_worker_ownership",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Storage and lifecycle",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1922,10 +2010,10 @@
       "target": "readme_gpu_headroom",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Storage and lifecycle",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1933,10 +2021,10 @@
       "target": "readme_test_isolation",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Build and verify",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1944,10 +2032,10 @@
       "target": "docs_product_brief_visual_authority",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": "Current product brief",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1955,10 +2043,10 @@
       "target": "docs_product_brief_sessions",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1966,10 +2054,10 @@
       "target": "docs_product_brief_preview",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1977,10 +2065,10 @@
       "target": "docs_product_brief_settings",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1988,10 +2076,10 @@
       "target": "docs_product_brief_voice",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -1999,10 +2087,10 @@
       "target": "docs_product_brief_acceptance",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2010,10 +2098,10 @@
       "target": "product_document",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2021,10 +2109,10 @@
       "target": "design_document",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2032,10 +2120,10 @@
       "target": "design_document",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "PRODUCT.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2043,10 +2131,10 @@
       "target": "product_document",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2054,10 +2142,10 @@
       "target": "readme_delete_scope",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "AI preview and deliberate saving",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2065,10 +2153,10 @@
       "target": "docs_product_brief_delete_scope",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": null,
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2076,10 +2164,10 @@
       "target": "readme_native_desktop_candidate",
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Native desktop candidate",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2087,10 +2175,10 @@
       "target": "readme_planner_sqlite",
       "relation": "shares_data_with",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Native desktop candidate",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2098,10 +2186,10 @@
       "target": "readme_test_isolation",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "Native desktop candidate",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2109,10 +2197,10 @@
       "target": "validation_synthetic_verification",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "VALIDATION.md",
       "source_location": "L3",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2120,10 +2208,10 @@
       "target": "validation_electron_source_checks",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "VALIDATION.md",
       "source_location": "L5",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2131,10 +2219,10 @@
       "target": "validation_tauri_candidate_checks",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "VALIDATION.md",
       "source_location": "L7",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2142,10 +2230,10 @@
       "target": "docs_legacy_readme_legacy_workflow",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/legacy/README.md",
       "source_location": "L3",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2153,10 +2241,10 @@
       "target": "docs_legacy_readme_conversation_lifecycle",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "docs/legacy/README.md",
       "source_location": "L5",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2164,10 +2252,10 @@
       "target": "readme_qwen_release_gate",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "L68",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2175,10 +2263,10 @@
       "target": "readme_electron_package",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "L70",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2186,10 +2274,10 @@
       "target": "readme_tauri_candidate",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "L74",
-      "weight": 1.0,
+      "weight": 1,
       "_origin": "semantic"
     },
     {
@@ -2197,10 +2285,120 @@
       "target": "readme_tauri_bundle",
       "relation": "references",
       "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
+      "confidence_score": 1,
       "source_file": "README.md",
       "source_location": "L76",
-      "weight": 1.0,
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_source_versions",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L7",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_native_upgrade",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L8",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_smart_app_control",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L9",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_wsl_shortcut",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L13",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_worker_shutdown",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L15",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_webkit_clipping",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L19",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_display_zoom",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L20",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_settings_layout",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L21",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_settings_regression",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L26",
+      "weight": 1,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_progress_document",
+      "target": "docs_progress_shortcut_redeployment",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/PROGRESS.md",
+      "source_location": "L29",
+      "weight": 1,
       "_origin": "semantic"
     }
   ],
@@ -2225,7 +2423,8 @@
     "index.html": "b8711f166548f62c1ae28a242142087ab65b0e7329e3040004a2994945e33346",
     "speech/requirements.txt": "e48eb5eaeaded104a10eb51574018b7a10f8ae2935fa61278c0b56371d29a704",
     "PRODUCT.md": "92c1459a61aece6ede7e9ea984767389b9a6fdf379410c1640b4992db42ae833",
-    "DESIGN.md": "8a65b27855d92fc0b3e0bb944240f3f8ce7d9bd993d5ede59dad50c13c5dfbff"
+    "DESIGN.md": "8a65b27855d92fc0b3e0bb944240f3f8ce7d9bd993d5ede59dad50c13c5dfbff",
+    "docs/PROGRESS.md": "ffd79189cef48d6dd27b21442fa0ca145c2e4555b1462b19e7c622449cfb4647"
   },
   "token_usage": {
     "input": null,

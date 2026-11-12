@@ -45,6 +45,7 @@ export default function Workspace(){
   const [busy,setBusy]=useState(false),[toast,setToast]=useState<{text:string;error?:boolean}|null>(null);
 
   const [settingsBusy,setSettingsBusy]=useState(false),[models,setModels]=useState<string[]>([]),[selectedModel,setSelectedModel]=useState(''),[contextTokens,setContextTokens]=useState(DEFAULT_ASSISTANT_CONTEXT),[activeContext,setActiveContext]=useState<number|null>(null),[settingsError,setSettingsError]=useState('');
+  const settingsButton=useRef<HTMLButtonElement>(null);
   const loadSettings=async()=>{setSettingsBusy(true);setSettingsError('');try{const value=await window.planner.runtimeSettings();setModels(value.models);setSelectedModel(value.model);setContextTokens(value.context);setActiveContext(value.activeContext);}catch(e){setSettingsError(clean(e));}finally{setSettingsBusy(false);}};
   const applySettings=async()=>{setSettingsBusy(true);setSettingsError('');setActiveContext(null);try{await window.planner.configureRuntime({model:selectedModel,context:contextTokens});await loadSettings();}catch(e){setSettingsError(clean(e));}finally{setSettingsBusy(false);}};
   const [taskLayout,setTaskLayout]=useState<'checklist'|'flow'>('checklist');
@@ -153,6 +154,10 @@ export default function Workspace(){
 
   function openPanel(next:Panel){setPopover(false);setPanel(next);if(next==='settings')void loadSettings();}
   function closePanel(){setPanel(null);setCategoryEditor(null);setOrganize(null);}
+  function closeSettings(){
+    closePanel();
+    requestAnimationFrame(()=>settingsButton.current?.focus({preventScroll:true}));
+  }
   async function openOrganize(){try{setOrganize(await window.planner.organizePreview());openPanel('organize');}catch(error){notify(clean(error),true);}}
 
   async function newChat(){
@@ -269,8 +274,8 @@ export default function Workspace(){
     <div className="dialog-footer"><button className="btn btn-primary" onClick={()=>openEditor({kind:'event',date:day})}>New event</button><button className="btn btn-outline" onClick={()=>openEditor({kind:'task',date:day})}>New task on this day</button></div>
   </Dialog>;
 
-  const settingsDialog=panel==='settings'&&<Dialog label="Assistant settings" onClose={closePanel}>
-    <div className="dialog-head dialog-heading"><div className="dialog-title"><PixelFlower size={28}/><h2>Settings</h2></div><button className="icon-button" aria-label="Close settings" onClick={closePanel}><Icon name="close"/></button></div>
+  const settingsDialog=panel==='settings'&&<Dialog label="Assistant settings" onClose={closeSettings} className="settings-dialog">
+    <div className="dialog-head dialog-heading"><div className="dialog-title"><PixelFlower size={28}/><h2>Settings</h2></div><button className="icon-button" aria-label="Close settings" onClick={closeSettings}><Icon name="close"/></button></div>
     <div className="dialog-body assistant-settings">
       <label>Appearance<select aria-label="Appearance" value={snapshot.preferences.appearance??'light'} onChange={e=>preference({appearance:e.target.value})}><option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option></select></label>
       <label>Ollama model<select aria-label="Ollama model" value={selectedModel} disabled={settingsBusy||thinking} onChange={e=>setSelectedModel(e.target.value)}>{!models.includes(selectedModel)&&<option value={selectedModel} disabled>{selectedModel?`${selectedModel} · unavailable`:'No eligible model selected'}</option>}{models.map(model=><option key={model}>{model}</option>)}</select></label>
@@ -451,7 +456,7 @@ export default function Workspace(){
         {([{value:'calendar',label:'Calendar',icon:'calendar'},{value:'tasks',label:'Tasks',icon:'tasks'}] as const).map(item=><button key={item.value} className={'side-button nav-item '+(view===item.value?'active':'')} aria-label={item.label+' view'} aria-current={view===item.value?'page':undefined} title={item.label} onClick={()=>{setView(item.value);setDay(null);setPopover(false);}}><Icon name={item.icon} size={24}/></button>)}
       </nav>
       <div className="side-bottom">
-        <button className="side-button" aria-label="Assistant settings" title="Settings" onClick={()=>openPanel('settings')}><Icon name="settings" size={22}/></button>
+        <button ref={settingsButton} className="side-button" aria-label="Assistant settings" title="Settings" onClick={()=>openPanel('settings')}><Icon name="settings" size={22}/></button>
         <PixelFlower size={25} className="sidebar-tulip"/>
         <PixelCat size={43}/>
         <span className="side-caption">mymind</span>

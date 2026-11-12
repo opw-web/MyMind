@@ -433,6 +433,13 @@ async fn dispatch(
         "transcribeDictation" => {
             transcribe_dictation(state, window, serde_json::from_value(input)?).await
         }
+        "setWslViewScale" => {
+            ensure!(uses_wsl_desktop(), "View scaling is available in the WSL desktop.");
+            let percent: u16 = serde_json::from_value(input)?;
+            ensure!((100..=200).contains(&percent), "View scale must be 100–200 percent.");
+            window.set_zoom(f64::from(percent) / 100.0)?;
+            Ok(Value::Null)
+        }
         "showWindow" => {
             if std::env::var("MYMIND_TEST_MODE").as_deref() != Ok("1") {
                 window.show()?;
@@ -586,6 +593,11 @@ fn profile(app: &tauri::App) -> Result<PathBuf> {
     Ok(app.path().app_local_data_dir()?.join("planner"))
 }
 
+const WSL_DEFAULT_VIEW_SCALE: u16 = 150;
+
+fn uses_wsl_desktop() -> bool {
+    cfg!(target_os = "linux") && std::env::var_os("MYMIND_WSL_LAUNCH").is_some()
+}
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
@@ -659,7 +671,16 @@ fn main() {
                 // WebKitGTK can defer animation frames while the window is hidden.
                 builder = builder.visible(true);
             }
+            if uses_wsl_desktop() {
+                builder = builder.maximized(true).initialization_script(format!(
+                    "(() => {{ const defaultPercent = {WSL_DEFAULT_VIEW_SCALE}; {} }})();",
+                    include_str!("wsl_view_scale.js"),
+                ));
+            }
             let window = builder.build()?;
+            if uses_wsl_desktop() {
+                window.set_zoom(f64::from(WSL_DEFAULT_VIEW_SCALE) / 100.0)?;
+            }
             #[cfg(windows)]
             windows_resume::install(&window, model.clone())?;
             let close_window = window.clone();

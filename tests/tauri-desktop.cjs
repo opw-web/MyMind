@@ -8,7 +8,7 @@ const { setTimeout: delay } = require('node:timers/promises');
 
 const executable = realpathSync(process.argv[2]);
 const profile = mkdtempSync(join(tmpdir(), 'mymind-tauri-test-'));
-const prompt = 'Remove the apply for community garden plan task and all its associated calendar event just delete them and do the same with the library meeting task remove the calendar events for that as well just delete';
+const prompt = 'Remove the apply for community garden plan task and all its associated calendar event just delete them and do the same with the library fundraiser task remove the calendar events for that as well just delete';
 
 async function port() {
   const server = createServer();
@@ -34,7 +34,7 @@ async function run() {
   ], {
     windowsHide: true,
     stdio: 'inherit',
-    env: { ...process.env, MYMIND_DATA_DIR: profile, MYMIND_SKIP_OLLAMA: '1', MYMIND_TEST_MODE: '1' },
+    env: { ...process.env, MYMIND_DATA_DIR: profile, MYMIND_SKIP_OLLAMA: '1', MYMIND_TEST_MODE: '0' },
   });
   let spawnError;
   driver.once('error', error => { spawnError = error; });
@@ -47,7 +47,7 @@ async function run() {
       signal: AbortSignal.timeout(35_000),
     });
     const { value } = await response.json();
-    if (!response.ok || value?.error) throw new Error(value?.message || ('WebDriver failed: ' + response.status));
+    if (!response.ok || value?.error) throw new Error(value?.message || value?.error || ('WebDriver failed: ' + response.status));
     return value;
   }
   async function evalInApp(fn, ...args) {
@@ -62,7 +62,31 @@ async function run() {
     await ready(() => command('GET', '/status').then(status => status.ready), 'Tauri WebDriver did not become ready.');
     const opened = await command('POST', '/session', { capabilities: { alwaysMatch: { 'tauri:options': { application: executable } } } });
     session = opened.sessionId;
+    await command('POST', '/session/' + session + '/window/rect', { width: 1440, height: 900 });
     await ready(() => evalInApp(async () => Boolean(window.planner && document.querySelector('[data-testid=calendar]'))), 'The native planner did not render the calendar.');
+    await evalInApp(async () => document.querySelector('[aria-label="Assistant settings"]').click());
+    await ready(() => evalInApp(async () => Boolean(document.querySelector('dialog[open] .assistant-settings'))),
+      'Settings did not open.');
+    const settings = await evalInApp(async () => {
+      const dialog = document.querySelector('dialog[open]');
+      const body = dialog.querySelector('.assistant-settings');
+      const appearance = dialog.querySelector('[aria-label="Appearance"]');
+      const content = body.getBoundingClientRect();
+      const control = appearance.getBoundingClientRect();
+      return {
+        viewportHeight: innerHeight,
+        contentHeight: content.height,
+        appearanceVisible: control.top >= content.top && control.bottom <= content.bottom,
+        horizontalOverflow: body.scrollWidth - body.clientWidth,
+      };
+    });
+    assert.ok(settings.contentHeight >= 200, 'Settings should expose its controls above the footer. ' + JSON.stringify(settings));
+    assert.ok(settings.appearanceVisible, 'The Appearance selector should be fully visible.');
+    assert.ok(settings.horizontalOverflow <= 1, 'Settings content should fit the dialog width.');
+    await evalInApp(async () => document.querySelector('[aria-label="Close settings"]').click());
+    await ready(() => evalInApp(async () => !document.querySelector('dialog[open] .assistant-settings')),
+      'Settings did not close.');
+
     const result = await evalInApp(async promptText => {
       const api = window.planner;
       const task = (id, title) => ({ action: 'create', entity: 'task', id, fields: { title } });
@@ -109,7 +133,7 @@ async function run() {
     assert.deepEqual(result.restored.events, result.before.events);
     assert.equal(result.recovered.bytes, 4);
     assert.equal(result.recovered.reviewText, 'Review this draft');
-    console.log('Tauri desktop passed calendar startup, verbatim preview, Apply, Undo, and binary dictation recovery.');
+    console.log('Tauri desktop passed Settings layout, calendar startup, deletion preview, Apply, Undo, and binary dictation recovery.');
   } finally {
     if (session) await command('DELETE', '/session/' + session).catch(() => {});
     driver.kill();
