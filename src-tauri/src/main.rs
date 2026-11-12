@@ -654,6 +654,11 @@ fn main() {
             } {
                 builder = builder.theme(Some(theme));
             }
+            #[cfg(target_os = "linux")]
+            if std::env::var("MYMIND_TEST_MODE").as_deref() != Ok("1") {
+                // WebKitGTK can defer animation frames while the window is hidden.
+                builder = builder.visible(true);
+            }
             let window = builder.build()?;
             #[cfg(windows)]
             windows_resume::install(&window, model.clone())?;

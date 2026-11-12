@@ -555,6 +555,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "chrono-tz",
+ "libc",
  "regex",
  "reqwest",
  "rusqlite",

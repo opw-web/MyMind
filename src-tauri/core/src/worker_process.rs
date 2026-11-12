@@ -180,6 +180,8 @@ mod platform {
         path::Path,
         process::{Child, Command, Stdio},
     };
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    use std::{io, mem, os::unix::process::CommandExt};
 
     pub struct ManagedProcess(Child);
 
@@ -188,15 +190,16 @@ mod platform {
         args: &[OsString],
         env: &[(OsString, OsString)],
     ) -> Result<ManagedProcess> {
-        Ok(ManagedProcess(
-            Command::new(executable)
-                .args(args)
-                .envs(env.iter().map(|(key, value)| (key, value)))
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()?,
-        ))
+        let mut command = Command::new(executable);
+        command
+            .args(args)
+            .envs(env.iter().map(|(key, value)| (key, value)))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        command.process_group(0);
+        Ok(ManagedProcess(command.spawn()?))
     }
 
     impl ManagedProcess {
@@ -204,13 +207,50 @@ mod platform {
             self.0.id()
         }
 
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         pub fn alive(&mut self) -> bool {
             matches!(self.0.try_wait(), Ok(None))
+        }
+
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        pub fn alive(&mut self) -> bool {
+            matches!(self.has_exited(), Ok(false))
+        }
+
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        fn has_exited(&self) -> io::Result<bool> {
+            loop {
+                // Keep the leader's PID reserved until the group has been signalled.
+                let mut info: libc::siginfo_t = unsafe { mem::zeroed() };
+                let result = unsafe {
+                    libc::waitid(
+                        libc::P_PID,
+                        self.pid() as libc::id_t,
+                        &mut info,
+                        libc::WEXITED | libc::WNOHANG | libc::WNOWAIT,
+                    )
+                };
+                if result == 0 {
+                    return Ok(unsafe { info.si_pid() } != 0);
+                }
+                let error = io::Error::last_os_error();
+                if error.kind() != io::ErrorKind::Interrupted {
+                    return Err(error);
+                }
+            }
         }
     }
 
     impl Drop for ManagedProcess {
         fn drop(&mut self) {
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            {
+                // Only signal the group while the leader is still our child.
+                if self.has_exited().is_err() {
+                    return;
+                }
+                unsafe { libc::killpg(self.pid() as libc::pid_t, libc::SIGKILL) };
+            }
             let _ = self.0.kill();
             let _ = self.0.wait();
         }
@@ -225,4 +265,79 @@ pub fn spawn(
     env: &[(OsString, OsString)],
 ) -> Result<ManagedProcess> {
     platform::spawn(executable, args, env)
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use std::{
+        fs,
+        path::Path,
+        thread,
+        time::{Duration, Instant},
+    };
+
+    use super::spawn;
+
+    fn wait_until(mut ready: impl FnMut() -> bool) -> bool {
+        let deadline = Instant::now() + Duration::from_secs(1);
+        while !ready() {
+            if Instant::now() >= deadline {
+                return false;
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        true
+    }
+
+    fn is_running(pid: u32) -> bool {
+        fs::read_to_string(format!("/proc/{pid}/stat"))
+            .ok()
+            .and_then(|stat| {
+                stat.rsplit_once(") ")
+                    .map(|(_, rest)| rest.starts_with('Z'))
+            })
+            .is_some_and(|zombie| !zombie)
+    }
+
+    #[test]
+    fn dropping_worker_stops_its_descendant_even_if_worker_already_exited() {
+        for worker_exits in [false, true] {
+            let temp = tempfile::tempdir().unwrap();
+            let pid_file = temp.path().join("descendant.pid");
+            let action = if worker_exits { "exit" } else { "wait" };
+            let mut worker = spawn(
+                Path::new("/bin/sh"),
+                &[
+                    "-c".into(),
+                    format!("sleep 5 & echo $! > \"$1\"; {action}").into(),
+                    "worker".into(),
+                    pid_file.clone().into_os_string(),
+                ],
+                &[],
+            )
+            .unwrap();
+            let mut descendant = None;
+            assert!(wait_until(|| {
+                descendant = fs::read_to_string(&pid_file)
+                    .ok()
+                    .and_then(|pid| pid.trim().parse::<u32>().ok());
+                descendant.is_some()
+            }));
+            let descendant = descendant.unwrap();
+            assert!(is_running(descendant));
+            if worker_exits {
+                assert!(wait_until(|| !worker.alive()));
+            } else {
+                assert!(worker.alive());
+            }
+
+            let mut other_worker = spawn(Path::new("/bin/sleep"), &["5".into()], &[]).unwrap();
+            drop(worker);
+            assert!(
+                wait_until(|| !is_running(descendant)),
+                "descendant survived cleanup (worker had exited: {worker_exits})"
+            );
+            assert!(other_worker.alive());
+        }
+    }
 }
