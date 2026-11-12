@@ -1054,6 +1054,19 @@
       "rationale": "Resolve requested identities before proposing deletion, clarify ambiguous names, and include linked sessions only if requested."
     },
     {
+      "id": "readme_native_desktop_candidate",
+      "label": "Tauri desktop candidate with Rust core and Windows release gates",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "Native desktop candidate",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Keep the Windows Electron patch until the Rust MSI is verified for upgrade, rollback, microphone and worker lifecycle. Native tests and desktop smoke use disposable data.",
+      "_origin": "semantic"
+    },
+    {
       "id": "validation_document",
       "label": "VALIDATION.md",
       "file_type": "document",
@@ -1075,6 +1088,14 @@
       "file_type": "concept",
       "source_file": "VALIDATION.md",
       "source_location": "L5",
+      "_origin": "semantic"
+    },
+    {
+      "id": "validation_tauri_candidate_checks",
+      "label": "Windows guest upgrade, v8 migration and rollback passed for the unsigned native candidate",
+      "file_type": "concept",
+      "source_file": "VALIDATION.md",
+      "source_location": "L7",
       "_origin": "semantic"
     },
     {
@@ -1115,6 +1136,22 @@
       "file_type": "concept",
       "source_file": "README.md",
       "source_location": "L70",
+      "_origin": "semantic"
+    },
+    {
+      "id": "readme_tauri_candidate",
+      "label": "Tauri candidate shares the planner and dictation database formats",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "L74",
+      "_origin": "semantic"
+    },
+    {
+      "id": "readme_tauri_bundle",
+      "label": "Tauri MSI requires the built speech runtime, Rust MSVC and WebView2",
+      "file_type": "concept",
+      "source_file": "README.md",
+      "source_location": "L76",
       "_origin": "semantic"
     }
   ],
@@ -2035,6 +2072,39 @@
       "_origin": "semantic"
     },
     {
+      "source": "readme_document",
+      "target": "readme_native_desktop_candidate",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "Native desktop candidate",
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "readme_native_desktop_candidate",
+      "target": "readme_planner_sqlite",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "Native desktop candidate",
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "readme_native_desktop_candidate",
+      "target": "readme_test_isolation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "Native desktop candidate",
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
       "source": "validation_document",
       "target": "validation_synthetic_verification",
       "relation": "references",
@@ -2053,6 +2123,17 @@
       "confidence_score": 1.0,
       "source_file": "VALIDATION.md",
       "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "validation_document",
+      "target": "validation_tauri_candidate_checks",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "VALIDATION.md",
+      "source_location": "L7",
       "weight": 1.0,
       "_origin": "semantic"
     },
@@ -2099,14 +2180,36 @@
       "source_location": "L70",
       "weight": 1.0,
       "_origin": "semantic"
+    },
+    {
+      "source": "readme_document",
+      "target": "readme_tauri_candidate",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L74",
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "readme_document",
+      "target": "readme_tauri_bundle",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L76",
+      "weight": 1.0,
+      "_origin": "semantic"
     }
   ],
   "hyperedges": [],
   "source_hashes": {
     ".github/workflows/checks.yml": "6e5ef642d7aff3ac6c17a1e13cbd60ba3cff26212cb7e7dd0a6cc118e4c0e975",
-    "README.md": "5c17b09a188b945a19b196e50fcdb80db9cbc6a2841dd7b7b5cc696042e146cd",
+    "README.md": "a4f1e5a31c03aedc1722baa771727e538ceb093aa983d41324f2c35f541dc3bc",
     "THIRD_PARTY_NOTICES.md": "14d4a7b4613fe094570640fa75b2839022fcba7fe426b0da9428bc5caac98dda",
-    "VALIDATION.md": "16dd4643aec3c811dcdae1113807559292aa73f4e173f6f5a98810dc81465305",
+    "VALIDATION.md": "6060a1e564cccbb06aed415a4d6451f3a596e25a38638a397c7b0b3be50381e5",
     "assets/icon.png": "43fa89f5307c75d9741d164dff73350be7f089a5998545643348b869662797b1",
     "assets/icon.svg": "8dc4f0ed394bf7af95670ae628fa87bf0befaee9b4bd913b6bb7837efd7026d7",
     "docs/PRODUCT_BRIEF.md": "9542788471db9e6a78d694a4ca15f78ef18889bce8e8aef81eac1a7991fef3ea",

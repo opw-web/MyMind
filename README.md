@@ -68,3 +68,11 @@ npm run graphify:check
 The Qwen release gate runs each workflow five times, including the verbatim deletion, a semantic deletion that requires inference, and a long dictation. It checks exact outcomes, zero writes before Apply, and Undo restoration in isolated databases. Both context sizes use the same fixtures and report the installed model digest, active context, GPU residency, tool calls and warm latency. The older `test:model` commands remain the historical 9B comparison. Native tests use isolated data and deterministic Ollama or speech boundaries where stated.
 
 To rebuild speech, create `.speech-env`, install `speech/requirements.lock.txt`, then `npm run build:speech`. Packaging commands are `npm run package` or `npm run package:msi`. No installer/deployment is implied by passing development checks. Historical [V1](docs/legacy/V1_README.md) and [V2](docs/V2_PLAN.md) documents retain earlier product history.
+
+### Native desktop candidate
+
+The Tauri candidate uses the same planner and dictation database formats as the Windows release. Its runtime consists of the Rust desktop app, the system WebView, local Ollama, and the bundled Python speech worker.
+
+On a Windows build machine with the Rust MSVC toolchain and WebView2, first build the speech runtime with the steps above, then use `npm run tauri -- build --bundles msi`. Use `cargo test --locked --manifest-path src-tauri/core/Cargo.toml` for the native core suite. The Tauri desktop smoke harness accepts an executable path and uses a disposable profile. It requires `tauri-driver` and the platform WebDriver.
+
+The Electron patch is built with `npm run package:msi`. Release the Tauri installer after native Windows verification of installation, upgrade, rollback, and microphone and worker lifecycle behavior.

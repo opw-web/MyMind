@@ -1,0 +1,26 @@
+[package]
+name = "mymind-desktop"
+version = "2.6.0"
+edition = "2024"
+
+[[bin]]
+name = "MYMIND"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = "2"
+
+[dependencies]
+anyhow = "1"
+fs2 = "0.4"
+mymind-core = { path = "core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = "2"
+tauri-plugin-single-instance = "2"
+tokio = { version = "1", features = ["time", "sync"] }
+tokio-util = "0.7"
+uuid = { version = "1", features = ["serde"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }

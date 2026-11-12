@@ -1,0 +1,16 @@
+{
+  "bundle": {
+    "targets": ["msi"],
+    "resources": {
+      "../speech-runtime/": "speech/",
+      "../assets/third-party/": "licenses/"
+    },
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper", "silent": true },
+      "wix": {
+        "upgradeCode": "530BE8B2-7AC4-55C1-BB32-5ACC31CB60FC",
+        "template": "windows/main.wxs"
+      }
+    }
+  }
+}

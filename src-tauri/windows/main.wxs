@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?if $(sys.BUILDARCH) = "x86"?>
+    <?define Win64 = "no"?>
+<?else?>
+    <?define Win64 = "yes"?>
+<?endif?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    <Product Id="*" Name="{{product_name}}" Version="{{version}}"
+             UpgradeCode="{{upgrade_code}}" Manufacturer="{{manufacturer}}"
+             Language="!(loc.TauriLanguage)">
+        <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser"
+                 SummaryCodepage="!(loc.TauriCodepage)" />
+        <Condition Message="MYMIND installs for the current user.">NOT ALLUSERS</Condition>
+        <MajorUpgrade Schedule="afterInstallInitialize" AllowSameVersionUpgrades="yes"
+                      DowngradeErrorMessage="!(loc.DowngradeErrorMessage)" />
+        <!-- Replace private app files during a major upgrade even if the previous runtime used higher file versions. -->
+        <SetProperty Id="REINSTALLMODE" Value="amus" Before="CostInitialize" Sequence="execute">WIX_UPGRADE_DETECTED</SetProperty>
+        <MediaTemplate EmbedCab="yes" CompressionLevel="mszip" MaximumUncompressedMediaSize="200" />
+
+        <Icon Id="ProductIcon" SourceFile="{{icon_path}}" />
+        <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
+        <UIRef Id="WixUI_ErrorProgressText" />
+
+        <!-- Tauri generates the resource key paths. Assign the per-user target at costing time. -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="INSTALLDIR" Name="{{product_name}}" />
+            <Directory Id="ProgramMenuFolder" />
+        </Directory>
+        <SetDirectory Id="INSTALLDIR" Value="[LocalAppDataFolder]Programs\\{{product_name}}" />
+        <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALLDIR]" After="CostFinalize" Sequence="execute" />
+
+        <DirectoryRef Id="INSTALLDIR">
+            <Component Id="Path" Guid="{{path_component_guid}}" Win64="$(var.Win64)">
+                <File Id="Path" Source="{{main_binary_path}}" KeyPath="yes" Checksum="yes" />
+            </Component>
+            {{#each binaries as |bin|}}
+            <Component Id="{{bin.id}}" Guid="{{bin.guid}}" Win64="$(var.Win64)">
+                <File Id="Bin_{{bin.id}}" Source="{{bin.path}}" KeyPath="yes" />
+            </Component>
+            {{/each}}
+            {{resources}}
+        </DirectoryRef>
+        <DirectoryRef Id="ProgramMenuFolder">
+            <Component Id="StartMenuEntry" Guid="*">
+                <Shortcut Id="StartMenuShortcut" Name="{{product_name}}" Target="[!Path]"
+                          Icon="ProductIcon" WorkingDirectory="INSTALLDIR">
+                    <ShortcutProperty Key="System.AppUserModel.ID" Value="{{bundle_id}}" />
+                </Shortcut>
+                <RegistryValue Root="HKCU" Key="Software\\{{manufacturer}}\\{{product_name}}\Installer"
+                               Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+        </DirectoryRef>
+        <Feature Id="MainProgram" Title="{{product_name}}" Level="1" Absent="disallow" AllowAdvertise="no">
+            <ComponentRef Id="Path" />
+            <ComponentRef Id="StartMenuEntry" />
+            {{#each binaries as |bin|}}
+            <ComponentRef Id="{{bin.id}}" />
+            {{/each}}
+            {{#each resource_file_ids as |id|}}
+            <ComponentRef Id="{{id}}" />
+            {{/each}}
+        </Feature>
+
+        <!-- Check before the predecessor can be removed, including during silent setup. -->
+        <util:CloseApplication Id="CheckMymindProcess" Target="MYMIND.exe"
+                               Property="MymindIsRunning" RebootPrompt="no" />
+        <CustomAction Id="BlockRunningMymind" Error="Close MYMIND, then run setup again." />
+
+        {{#if install_webview}}
+        <Property Id="WEBVIEW2_MACHINE">
+            <RegistrySearch Id="WebView2Machine" Root="HKLM" Win64="no"
+                            Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+                            Name="pv" Type="raw" />
+        </Property>
+        <Property Id="WEBVIEW2_USER">
+            <RegistrySearch Id="WebView2User" Root="HKCU" Win64="no"
+                            Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+                            Name="pv" Type="raw" />
+        </Property>
+        {{#if webview2_bootstrapper_path}}
+        <Binary Id="WebView2Installer" SourceFile="{{webview2_bootstrapper_path}}" />
+        {{else}}
+        {{#if webview2_installer_path}}
+        <Binary Id="WebView2Installer" SourceFile="{{webview2_installer_path}}" />
+        {{else}}
+        <?error Select embedBootstrapper or offlineInstaller for this MSI template?>
+        {{/if}}
+        {{/if}}
+        <CustomAction Id="InstallWebView2" BinaryKey="WebView2Installer"
+                      ExeCommand="{{webview_installer_args}} /install" Execute="deferred"
+                      Impersonate="yes" Return="check" />
+        {{/if}}
+        <InstallExecuteSequence>
+            <Custom Action="WixCloseApplications" Before="InstallValidate">1</Custom>
+            <Custom Action="BlockRunningMymind" After="WixCloseApplications">MymindIsRunning</Custom>
+            {{#if install_webview}}
+            <Custom Action="InstallWebView2" Before="InstallFinalize">
+                NOT REMOVE AND (NOT WEBVIEW2_MACHINE OR WEBVIEW2_MACHINE = "0.0.0.0")
+                AND (NOT WEBVIEW2_USER OR WEBVIEW2_USER = "0.0.0.0")
+            </Custom>
+            {{/if}}
+        </InstallExecuteSequence>
+    </Product>
+</Wix>
