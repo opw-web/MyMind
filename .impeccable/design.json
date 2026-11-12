@@ -1,0 +1,630 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-23T17:36:14.863234+00:00",
+  "title": "Design System: MYMIND Command",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Midnight Ground",
+        "tonalRamp": [
+          "oklch(15% 0.02941 253.13)",
+          "oklch(26% 0.02941 253.13)",
+          "oklch(38% 0.02941 253.13)",
+          "oklch(49% 0.02941 253.13)",
+          "oklch(61% 0.02941 253.13)",
+          "oklch(72% 0.02941 253.13)",
+          "oklch(84% 0.02941 253.13)",
+          "oklch(95% 0.02941 253.13)"
+        ]
+      },
+      "workspace": {
+        "role": "neutral",
+        "displayName": "Working Midnight",
+        "tonalRamp": [
+          "oklch(15% 0.03092 255.20)",
+          "oklch(26% 0.03092 255.20)",
+          "oklch(38% 0.03092 255.20)",
+          "oklch(49% 0.03092 255.20)",
+          "oklch(61% 0.03092 255.20)",
+          "oklch(72% 0.03092 255.20)",
+          "oklch(84% 0.03092 255.20)",
+          "oklch(95% 0.03092 255.20)"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised Blue",
+        "tonalRamp": [
+          "oklch(15% 0.04271 253.66)",
+          "oklch(26% 0.04271 253.66)",
+          "oklch(38% 0.04271 253.66)",
+          "oklch(49% 0.04271 253.66)",
+          "oklch(61% 0.04271 253.66)",
+          "oklch(72% 0.04271 253.66)",
+          "oklch(84% 0.04271 253.66)",
+          "oklch(95% 0.04271 253.66)"
+        ]
+      },
+      "nav": {
+        "role": "neutral",
+        "displayName": "Navigation Blue",
+        "tonalRamp": [
+          "oklch(15% 0.03750 252.88)",
+          "oklch(26% 0.03750 252.88)",
+          "oklch(38% 0.03750 252.88)",
+          "oklch(49% 0.03750 252.88)",
+          "oklch(61% 0.03750 252.88)",
+          "oklch(72% 0.03750 252.88)",
+          "oklch(84% 0.03750 252.88)",
+          "oklch(95% 0.03750 252.88)"
+        ]
+      },
+      "primary": {
+        "role": "neutral",
+        "displayName": "Ice Text",
+        "tonalRamp": [
+          "oklch(15% 0.01616 245.09)",
+          "oklch(26% 0.01616 245.09)",
+          "oklch(38% 0.01616 245.09)",
+          "oklch(49% 0.01616 245.09)",
+          "oklch(61% 0.01616 245.09)",
+          "oklch(72% 0.01616 245.09)",
+          "oklch(84% 0.01616 245.09)",
+          "oklch(95% 0.01616 245.09)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Muted Steel",
+        "tonalRamp": [
+          "oklch(15% 0.03395 245.41)",
+          "oklch(26% 0.03395 245.41)",
+          "oklch(38% 0.03395 245.41)",
+          "oklch(49% 0.03395 245.41)",
+          "oklch(61% 0.03395 245.41)",
+          "oklch(72% 0.03395 245.41)",
+          "oklch(84% 0.03395 245.41)",
+          "oklch(95% 0.03395 245.41)"
+        ]
+      },
+      "cyan": {
+        "role": "primary",
+        "displayName": "Command Cyan",
+        "tonalRamp": [
+          "oklch(15% 0.11873 223.60)",
+          "oklch(26% 0.11873 223.60)",
+          "oklch(38% 0.11873 223.60)",
+          "oklch(49% 0.11873 223.60)",
+          "oklch(61% 0.11873 223.60)",
+          "oklch(72% 0.11873 223.60)",
+          "oklch(84% 0.11873 223.60)",
+          "oklch(95% 0.11873 223.60)"
+        ]
+      },
+      "cyan-hover": {
+        "role": "primary",
+        "displayName": "Command Cyan Hover",
+        "tonalRamp": [
+          "oklch(15% 0.08734 221.11)",
+          "oklch(26% 0.08734 221.11)",
+          "oklch(38% 0.08734 221.11)",
+          "oklch(49% 0.08734 221.11)",
+          "oklch(61% 0.08734 221.11)",
+          "oklch(72% 0.08734 221.11)",
+          "oklch(84% 0.08734 221.11)",
+          "oklch(95% 0.08734 221.11)"
+        ]
+      },
+      "cyan-soft": {
+        "role": "primary",
+        "displayName": "Deep Cyan Wash",
+        "tonalRamp": [
+          "oklch(15% 0.05009 235.29)",
+          "oklch(26% 0.05009 235.29)",
+          "oklch(38% 0.05009 235.29)",
+          "oklch(49% 0.05009 235.29)",
+          "oklch(61% 0.05009 235.29)",
+          "oklch(72% 0.05009 235.29)",
+          "oklch(84% 0.05009 235.29)",
+          "oklch(95% 0.05009 235.29)"
+        ]
+      },
+      "boundary": {
+        "role": "neutral",
+        "displayName": "Boundary Steel",
+        "tonalRamp": [
+          "oklch(15% 0.05239 243.12)",
+          "oklch(26% 0.05239 243.12)",
+          "oklch(38% 0.05239 243.12)",
+          "oklch(49% 0.05239 243.12)",
+          "oklch(61% 0.05239 243.12)",
+          "oklch(72% 0.05239 243.12)",
+          "oklch(84% 0.05239 243.12)",
+          "oklch(95% 0.05239 243.12)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Quiet Divider",
+        "tonalRamp": [
+          "oklch(15% 0.04541 249.21)",
+          "oklch(26% 0.04541 249.21)",
+          "oklch(38% 0.04541 249.21)",
+          "oklch(49% 0.04541 249.21)",
+          "oklch(61% 0.04541 249.21)",
+          "oklch(72% 0.04541 249.21)",
+          "oklch(84% 0.04541 249.21)",
+          "oklch(95% 0.04541 249.21)"
+        ]
+      },
+      "attention": {
+        "role": "secondary",
+        "displayName": "Attention Amber",
+        "tonalRamp": [
+          "oklch(15% 0.11638 70.67)",
+          "oklch(26% 0.11638 70.67)",
+          "oklch(38% 0.11638 70.67)",
+          "oklch(49% 0.11638 70.67)",
+          "oklch(61% 0.11638 70.67)",
+          "oklch(72% 0.11638 70.67)",
+          "oklch(84% 0.11638 70.67)",
+          "oklch(95% 0.11638 70.67)"
+        ]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Saved Mint",
+        "tonalRamp": [
+          "oklch(15% 0.10870 164.98)",
+          "oklch(26% 0.10870 164.98)",
+          "oklch(38% 0.10870 164.98)",
+          "oklch(49% 0.10870 164.98)",
+          "oklch(61% 0.10870 164.98)",
+          "oklch(72% 0.10870 164.98)",
+          "oklch(84% 0.10870 164.98)",
+          "oklch(95% 0.10870 164.98)"
+        ]
+      },
+      "error": {
+        "role": "secondary",
+        "displayName": "Error Rose",
+        "tonalRamp": [
+          "oklch(15% 0.14858 21.22)",
+          "oklch(26% 0.14858 21.22)",
+          "oklch(38% 0.14858 21.22)",
+          "oklch(49% 0.14858 21.22)",
+          "oklch(61% 0.14858 21.22)",
+          "oklch(72% 0.14858 21.22)",
+          "oklch(84% 0.14858 21.22)",
+          "oklch(95% 0.14858 21.22)"
+        ]
+      },
+      "category-coral": {
+        "role": "secondary",
+        "displayName": "Category Coral",
+        "tonalRamp": [
+          "oklch(15% 0.10828 29.57)",
+          "oklch(26% 0.10828 29.57)",
+          "oklch(38% 0.10828 29.57)",
+          "oklch(49% 0.10828 29.57)",
+          "oklch(61% 0.10828 29.57)",
+          "oklch(72% 0.10828 29.57)",
+          "oklch(84% 0.10828 29.57)",
+          "oklch(95% 0.10828 29.57)"
+        ]
+      },
+      "category-sage": {
+        "role": "secondary",
+        "displayName": "Category Sage",
+        "tonalRamp": [
+          "oklch(15% 0.05778 154.42)",
+          "oklch(26% 0.05778 154.42)",
+          "oklch(38% 0.05778 154.42)",
+          "oklch(49% 0.05778 154.42)",
+          "oklch(61% 0.05778 154.42)",
+          "oklch(72% 0.05778 154.42)",
+          "oklch(84% 0.05778 154.42)",
+          "oklch(95% 0.05778 154.42)"
+        ]
+      },
+      "category-sky": {
+        "role": "secondary",
+        "displayName": "Category Sky",
+        "tonalRamp": [
+          "oklch(15% 0.07273 234.38)",
+          "oklch(26% 0.07273 234.38)",
+          "oklch(38% 0.07273 234.38)",
+          "oklch(49% 0.07273 234.38)",
+          "oklch(61% 0.07273 234.38)",
+          "oklch(72% 0.07273 234.38)",
+          "oklch(84% 0.07273 234.38)",
+          "oklch(95% 0.07273 234.38)"
+        ]
+      },
+      "category-lavender": {
+        "role": "secondary",
+        "displayName": "Category Lavender",
+        "tonalRamp": [
+          "oklch(15% 0.08231 293.10)",
+          "oklch(26% 0.08231 293.10)",
+          "oklch(38% 0.08231 293.10)",
+          "oklch(49% 0.08231 293.10)",
+          "oklch(61% 0.08231 293.10)",
+          "oklch(72% 0.08231 293.10)",
+          "oklch(84% 0.08231 293.10)",
+          "oklch(95% 0.08231 293.10)"
+        ]
+      },
+      "category-rose": {
+        "role": "secondary",
+        "displayName": "Category Rose",
+        "tonalRamp": [
+          "oklch(15% 0.08494 346.44)",
+          "oklch(26% 0.08494 346.44)",
+          "oklch(38% 0.08494 346.44)",
+          "oklch(49% 0.08494 346.44)",
+          "oklch(61% 0.08494 346.44)",
+          "oklch(72% 0.08494 346.44)",
+          "oklch(84% 0.08494 346.44)",
+          "oklch(95% 0.08494 346.44)"
+        ]
+      }
+    },
+    "tonalRampPolicy": {
+      "purpose": "Preview swatch exploration only; not implemented UI tokens.",
+      "method": "Eight synthesized OKLCH lightness steps from 15% to 95%, preserving each extracted color chroma and hue. Out-of-sRGB values remain CSS OKLCH; use source primitives for production."
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "MYMIND Identity",
+        "purpose": "Oxanium brand mark, wordmark and loading identity."
+      },
+      "headline": {
+        "displayName": "View Heading",
+        "purpose": "Desktop view and embedded-editor headings."
+      },
+      "headline-compact": {
+        "displayName": "Compact View Heading",
+        "purpose": "View headings at widths up to 1100px."
+      },
+      "title": {
+        "displayName": "Conversation Title",
+        "purpose": "Conversation welcome and normal recording heading."
+      },
+      "body": {
+        "displayName": "Working Body",
+        "purpose": "Task titles and desktop messages."
+      },
+      "body-compact": {
+        "displayName": "Compact Conversation",
+        "purpose": "Compact messages and transcript text."
+      },
+      "control": {
+        "displayName": "Action and Section Label",
+        "purpose": "Medium-weight controls and section labels; receipt prose remains regular."
+      },
+      "helper": {
+        "displayName": "Helper",
+        "purpose": "Runtime progress, dates and concise secondary explanation."
+      },
+      "label": {
+        "displayName": "Metadata",
+        "purpose": "Field labels, navigation labels and restrained task metadata."
+      }
+    },
+    "shadows": [
+      {
+        "name": "text-box-popup",
+        "value": "0 8px 28px #0007",
+        "purpose": "Independent text-box popup."
+      },
+      {
+        "name": "dialog",
+        "value": "0 20px 80px #0006",
+        "purpose": "Modal dialog only."
+      },
+      {
+        "name": "toast",
+        "value": "0 8px 24px #0004",
+        "purpose": "Transient saved/error notification."
+      }
+    ],
+    "motion": [
+      {
+        "name": "button-color-transition",
+        "value": "background-color .16s ease-out,color .16s ease-out",
+        "purpose": "Authored button color changes."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation:none!important;transition:none!important;scroll-behavior:auto!important",
+        "purpose": "Global reduced-motion CSS."
+      },
+      {
+        "name": "orb-static-frame",
+        "value": "frame(0.6)",
+        "purpose": "Actual deterministic reduced-motion engine representative frame; listening uses the approved matching SVG."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-width",
+        "value": "1100px",
+        "condition": "max-width"
+      },
+      {
+        "name": "short-window",
+        "value": "700px",
+        "condition": "max-height"
+      }
+    ],
+    "focus": {
+      "value": "2px solid var(--cyan)",
+      "offset": "3px",
+      "purpose": "Buttons, inputs, selects, textareas, tabindex controls and summaries; selected category swatches use the same outline."
+    },
+    "disabled": {
+      "opacity": 0.4,
+      "cursor": "not-allowed"
+    },
+    "backdrop": {
+      "background": "#07111dcc",
+      "backdropFilter": "none"
+    },
+    "layout": {
+      "desktop1440x900": {
+        "rail": 80,
+        "header": 64,
+        "workspacePadding": 24,
+        "chatDefault": 360,
+        "chatMax": 560,
+        "panelGap": 16,
+        "resizer": 8,
+        "gridGap": 4,
+        "chatPadding": 16,
+        "composerHeight": 200
+      },
+      "compact900x600": {
+        "rail": 72,
+        "header": 64,
+        "workspacePadding": 16,
+        "chatWidth": 300,
+        "panelGap": 12,
+        "resizer": 6,
+        "gridGap": 3,
+        "chatPadding": 12,
+        "composerHeight": 160
+      },
+      "compactTallComposerHeight": 172,
+      "shortWindowComposerHeight": 160,
+      "unit": "px",
+      "persistentBehavior": "One right-hand conversation remains beside Calendar, Tasks, editors, Categories and Settings. Assistant expands the same chat while retaining the visible plan. Main content and conversation scroll independently; composer and editor Save/Cancel remain pinned.",
+      "resizing": "Desktop chat clamps to 360–560px, uses pointer resizing or 20px keyboard steps; compact width fixes 300px and disables expansion/resizing.",
+      "calendar": {
+        "monthLabelWidth": 56,
+        "detailsDayWidthMin": 116,
+        "detailsDayWidthMax": 240,
+        "overviewDayWidth": 52,
+        "dayHeaderHeight": 52,
+        "overviewMarkerHeight": 44,
+        "laneHeight": 64,
+        "laneGap": 8,
+        "monthGap": 24,
+        "unit": "px",
+        "behavior": "One horizontally scrolling row per month; continuous inclusive event bars; overview preserves weekday/date pairs."
+      },
+      "heightSemantics": "DESIGN.md component heights record minimum heights where source uses min-height; permit content growth."
+    },
+    "voiceSequence": [
+      "Record",
+      "same-button Stop",
+      "final transcription with live text retained",
+      "editable composer",
+      "explicit Send"
+    ],
+    "voiceInvariants": [
+      "Recording continues through pauses and tab changes.",
+      "Preserve cancellation, recovery and transcript versions.",
+      "Voice sessions and spoken replies remain optional.",
+      "Stop response interrupts model/speech work.",
+      "Stopping recording does not send the text."
+    ],
+    "dateBehavior": {
+      "dateAlonePlacesOnCalendar": false,
+      "linkedDate": "Explicit links share Date from either editor.",
+      "unlink": "Preserve Date.",
+      "clearDate": "Remove Calendar placement.",
+      "time": "Optional and separate.",
+      "existingConflicts": "Keep Calendar date and placement.",
+      "existingMultiDayRanges": "Preserve linked ranges."
+    },
+    "orbRuntime": {
+      "wrapper": "src/renderer/CommandOrb.tsx",
+      "source": "src/renderer/thinking-orbs/ThinkingOrb.tsx",
+      "engine": "src/renderer/thinking-orbs/engine/registry.ts",
+      "presetResolver": "src/renderer/thinking-orbs/presets.ts",
+      "theme": "dark",
+      "idleAsset": "public/command/orb-breathing-20.svg",
+      "idleSize": 20,
+      "listeningReducedMotionAsset": "public/command/orb-listening-{size}.svg",
+      "reducedMotion": "useReducedMotion follows the live media query. Listening uses matching static SVG; other engine states draw one deterministic frame at 0.6 seconds.",
+      "lifecycle": "Shared performance.now clock; per-instance animation loop pauses offscreen and when document is hidden.",
+      "workspaceStates": {
+        "listening": "listening",
+        "finalTranscription": "working",
+        "spokenReply": "composing",
+        "understanding": "solving",
+        "searching": "searching",
+        "preparing": "weaving",
+        "saving": "working",
+        "responding": "composing",
+        "idle": "breathing"
+      },
+      "previewLimit": "Sidecar renders the exact approved static idle SVG. It does not reimplement the canvas animation engine."
+    },
+    "assets": [
+      {
+        "path": "public/fonts/IBM-Plex-Sans.ttf",
+        "role": "Body and working UI font."
+      },
+      {
+        "path": "public/fonts/Oxanium.ttf",
+        "role": "Restrained MYMIND identity font."
+      },
+      {
+        "path": "public/command/",
+        "role": "Exact approved navigation SVGs, active variants and static orb frames."
+      }
+    ],
+    "authority": {
+      "product": "PRODUCT.md",
+      "designSource": "src/renderer/command.css",
+      "geometryAndState": "src/renderer/Workspace.tsx",
+      "orbWrapper": "src/renderer/CommandOrb.tsx",
+      "approvedFigma": "https://www.figma.com/design/SPe2aVUSaUNqmI5Gmnvv1F/MYMIND-wireframe?node-id=68-2825",
+      "finishDisposition": "ship",
+      "scope": "Documentation of the reviewed implementation; no detector rerun or code/UI changes."
+    },
+    "previewNotes": [
+      "Component previews are isolated HTML/CSS material samples; they do not mutate planner data.",
+      "CSS uses inherited source custom properties with literal fallbacks so it renders in an isolated shadow DOM.",
+      "Synthesized tonal ramps are panel exploration metadata, not additional production palette commitments.",
+      "The 10 selected previews cover canonical primitives and the exact idle signature; full application interactions remain in source."
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Cyan commitment action; minimum 44px interaction height.",
+      "html": "<button class=\"ds-primary\">Save task</button>",
+      "css": ".ds-primary{min-height:44px;padding:0 16px;border-radius:var(--radius,8px);font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:500;line-height:20px;display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;transition:background-color .16s ease-out,color .16s ease-out;cursor:pointer;background:var(--cyan,#62d7ff);color:var(--canvas,#07111d);border:1px solid transparent}.ds-primary:hover:not(:disabled){background:#93e4ff}.ds-primary:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}.ds-primary:disabled{opacity:.4;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-primary{transition:none}}"
+    },
+    {
+      "name": "Subtle button",
+      "kind": "button",
+      "refersTo": "button-subtle",
+      "description": "Working-surface action with tonal hover.",
+      "html": "<button class=\"ds-subtle\">Cancel</button>",
+      "css": ".ds-subtle{min-height:44px;padding:0 16px;border-radius:var(--radius,8px);font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:500;line-height:20px;display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;transition:background-color .16s ease-out,color .16s ease-out;cursor:pointer;background:var(--workspace,#08121f);color:var(--primary,#e7f1fa);border:1px solid transparent}.ds-subtle:hover:not(:disabled){background:var(--raised,#102033)}.ds-subtle:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}.ds-subtle:disabled{opacity:.4;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-subtle{transition:none}}"
+    },
+    {
+      "name": "Today button",
+      "kind": "button",
+      "refersTo": "button-today",
+      "description": "Raised, outlined Calendar action.",
+      "html": "<button class=\"ds-today\">Today</button>",
+      "css": ".ds-today{min-height:44px;padding:0 16px;border-radius:var(--radius,8px);font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:500;line-height:20px;display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;transition:background-color .16s ease-out,color .16s ease-out;cursor:pointer;background:var(--raised,#102033);color:var(--primary,#e7f1fa);border:1px solid var(--boundary,#607f98)}.ds-today:hover:not(:disabled){background:var(--raised,#102033)}.ds-today:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}.ds-today:disabled{opacity:.4;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-today{transition:none}}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "General raised outlined field with cyan keyboard focus.",
+      "html": "<input class=\"ds-input\" aria-label=\"Task name\" placeholder=\"Task name\" value=\"Prepare interview\">",
+      "css": ".ds-input{font-family:'IBM Plex Sans',sans-serif;color:var(--primary,#e7f1fa);background:var(--raised,#102033);border:1px solid var(--boundary,#607f98);border-radius:var(--radius,8px);padding:12px;font-size:14px;caret-color:var(--cyan,#62d7ff)}.ds-input::placeholder{color:var(--secondary,#a4b8ca);opacity:1}.ds-input:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}"
+    },
+    {
+      "name": "Active rail navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Exact checked-in Assistant SVG, 64px item width and 80px minimum height.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main navigation\"><button class=\"ds-nav-item ds-nav-active\" aria-current=\"page\"><svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<g id=\"Frame\">\n<path id=\"Vector\" d=\"M17.5 9.16667C17.5 10.9348 16.7976 12.6305 15.5474 13.8807C14.2971 15.131 12.6014 15.8333 10.8333 15.8333H5.83333L2.5 18.3333V9.16667C2.5 7.17754 3.29018 5.26989 4.6967 3.86337C6.10322 2.45684 8.01088 1.66667 10 1.66667C11.9891 1.66667 13.8968 2.45684 15.3033 3.86337C16.7098 5.26989 17.5 7.17754 17.5 9.16667Z\" stroke-width=\"1.41667\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke=\"#A4B8CA\"/>\n</g>\n</svg><span>Assistant</span></button></nav>",
+      "css": ".ds-nav{background:var(--nav,#0b1929);padding:8px;width:64px}.ds-nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:80px;gap:4px;border:0;border-radius:8px;background:transparent;color:var(--secondary,#a4b8ca);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:400;line-height:18px;cursor:pointer;transition:background-color .16s ease-out,color .16s ease-out}.ds-nav-item.ds-nav-active{background:var(--cyan-soft,#153648);color:var(--cyan,#62d7ff)}.ds-nav-item:hover{background:var(--raised,#102033)}.ds-nav-item:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-nav-item{transition:none}}"
+    },
+    {
+      "name": "Selection chip",
+      "kind": "chip",
+      "refersTo": "selection-chip",
+      "description": "Selected planner-item context with a 44px clear action and truncation.",
+      "html": "<div class=\"ds-chip\"><span>Discussing: Prepare interview</span><button class=\"ds-chip-clear\" aria-label=\"Clear selected item\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.65\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></div>",
+      "css": ".ds-chip{padding:4px 4px 4px 12px;min-height:44px;display:flex;align-items:center;gap:8px;border:1px solid var(--boundary,#607f98);background:var(--raised,#102033);border-radius:8px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;line-height:18px;color:var(--secondary,#a4b8ca);max-width:300px}.ds-chip>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}.ds-chip-clear{width:44px;height:44px;min-width:44px;border:0;border-radius:8px;background:transparent;color:var(--primary,#e7f1fa);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.ds-chip-clear:hover{background:var(--raised,#102033)}.ds-chip-clear:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}"
+    },
+    {
+      "name": "Saved action receipt",
+      "kind": "card",
+      "refersTo": "action-card",
+      "description": "Real saved-result material with Open and Undo actions; preview text is illustrative.",
+      "html": "<article class=\"ds-receipt\"><strong class=\"ds-saved\">Saved to your planner</strong><p>Task saved</p><div class=\"ds-receipt-actions\"><button>Open</button><button>Undo these changes</button></div></article>",
+      "css": ".ds-receipt{border:1px solid var(--boundary,#607f98);padding:16px;border-radius:8px;background:var(--raised,#102033);color:var(--primary,#e7f1fa);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:20px;max-width:320px}.ds-saved{color:var(--success,#79d9b1);font-size:14px;line-height:20px;font-weight:500}.ds-receipt p{margin:8px 0;color:var(--secondary,#a4b8ca)}.ds-receipt-actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}.ds-receipt-actions button{min-height:44px;font-family:inherit;font-size:14px;font-weight:500;line-height:20px;border:1px solid var(--boundary,#607f98);border-radius:8px;padding:0 12px;background:var(--workspace,#08121f);color:var(--primary,#e7f1fa);cursor:pointer}.ds-receipt-actions button:hover{background:var(--raised,#102033)}.ds-receipt-actions button:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}.ds-receipt-actions button:disabled{opacity:.4;cursor:not-allowed}"
+    },
+    {
+      "name": "Authored checkbox",
+      "kind": "input",
+      "refersTo": "checkbox",
+      "description": "Actual native 20px checkbox material; editor/checklist contexts enlarge the face to 24px.",
+      "html": "<label class=\"ds-check-label\"><input class=\"ds-check\" type=\"checkbox\" checked>Spoken replies</label>",
+      "css": ".ds-check-label{display:flex;align-items:center;gap:12px;min-height:44px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--primary,#e7f1fa)}.ds-check{appearance:none;width:20px;height:20px;flex-shrink:0;padding:0;border:1px solid var(--boundary,#607f98);border-radius:4px;background:var(--workspace,#08121f);display:inline-grid;place-content:center;vertical-align:middle;cursor:pointer}.ds-check:checked{background:var(--success,#79d9b1);border-color:var(--success,#79d9b1)}.ds-check:hover:not(:disabled){border-color:var(--cyan,#62d7ff)}.ds-check:checked::after{content:'';width:10px;height:6px;border:solid var(--canvas,#07111d);border-width:0 0 2px 2px;transform:translateY(-1px) rotate(-45deg)}.ds-check:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}.ds-check:disabled{opacity:.4;cursor:not-allowed}"
+    },
+    {
+      "name": "Authored range slider",
+      "kind": "input",
+      "refersTo": "slider",
+      "description": "Electron/WebKit native control: 44px interaction height, 4px track and 16px cyan thumb.",
+      "html": "<input class=\"ds-range\" aria-label=\"Context window\" type=\"range\" min=\"12\" max=\"20\" step=\"1\" value=\"16\">",
+      "css": ".ds-range{appearance:none;height:44px;background:transparent;border:0;padding:0;border-radius:0;color:var(--primary,#e7f1fa)}.ds-range::-webkit-slider-runnable-track{height:4px;background:var(--line,#293e53);border-radius:2px}.ds-range::-webkit-slider-thumb{appearance:none;width:16px;height:16px;margin-top:-6px;background:var(--cyan,#62d7ff);border:0;border-radius:50%}.ds-range:hover::-webkit-slider-thumb{background:#93e4ff}.ds-range:focus-visible{outline:2px solid var(--cyan,#62d7ff);outline-offset:3px}.ds-range:disabled{opacity:.4;cursor:not-allowed}"
+    },
+    {
+      "name": "Approved idle Thinking Orb",
+      "kind": "custom",
+      "refersTo": "orb-idle",
+      "description": "Exact breathing 20px SVG used by CommandOrb. Static panel preview; live state animation remains in the real ThinkingOrb runtime.",
+      "html": "<div class=\"ds-orb\" role=\"img\" aria-label=\"MYMIND idle\"><svg preserveAspectRatio=\"none\" overflow=\"visible\" style=\"display: block;\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n<g id=\"MYMIND/Command/Orb/breathing/20\">\n<g id=\"Source geometry\">\n<path d=\"M3.9149 14.8367C4.14443 14.8367 4.3305 14.6506 4.3305 14.4211C4.3305 14.1916 4.14443 14.0055 3.9149 14.0055C3.68537 14.0055 3.4993 14.1916 3.4993 14.4211C3.4993 14.6506 3.68537 14.8367 3.9149 14.8367Z\" fill=\"#767676\" fill-opacity=\"0.6241\"/>\n<path d=\"M16.8191 13.4521C17.0488 13.4521 17.2351 13.2659 17.2351 13.0361C17.2351 12.8063 17.0488 12.6201 16.8191 12.6201C16.5893 12.6201 16.4031 12.8063 16.4031 13.0361C16.4031 13.2659 16.5893 13.4521 16.8191 13.4521Z\" fill=\"#777777\" fill-opacity=\"0.6246\"/>\n<path d=\"M17.3581 10.4168C17.5883 10.4168 17.7749 10.2302 17.7749 10C17.7749 9.76981 17.5883 9.5832 17.3581 9.5832C17.1279 9.5832 16.9413 9.76981 16.9413 10C16.9413 10.2302 17.1279 10.4168 17.3581 10.4168Z\" fill=\"#777777\" fill-opacity=\"0.6257\"/>\n<path d=\"M6.3496 4.0944C6.58001 4.0944 6.7668 3.90761 6.7668 3.6772C6.7668 3.44679 6.58001 3.26 6.3496 3.26C6.11919 3.26 5.9324 3.44679 5.9324 3.6772C5.9324 3.90761 6.11919 4.0944 6.3496 4.0944Z\" fill=\"#777777\" fill-opacity=\"0.6263\"/>\n<path d=\"M9.2586 3.3644C9.48979 3.3644 9.6772 3.17699 9.6772 2.9458C9.6772 2.71461 9.48979 2.5272 9.2586 2.5272C9.02741 2.5272 8.84 2.71461 8.84 2.9458C8.84 3.17699 9.02741 3.3644 9.2586 3.3644Z\" fill=\"#777777\" fill-opacity=\"0.6284\"/>\n<path d=\"M6.5353 16.4208C6.76709 16.4208 6.955 16.2329 6.955 16.0011C6.955 15.7693 6.76709 15.5814 6.5353 15.5814C6.30351 15.5814 6.1156 15.7693 6.1156 16.0011C6.1156 16.2329 6.30351 16.4208 6.5353 16.4208Z\" fill=\"#787878\" fill-opacity=\"0.63\"/>\n<path d=\"M12.1332 3.8545C12.3651 3.8545 12.5531 3.6665 12.5531 3.4346C12.5531 3.2027 12.3651 3.0147 12.1332 3.0147C11.9013 3.0147 11.7133 3.2027 11.7133 3.4346C11.7133 3.6665 11.9013 3.8545 12.1332 3.8545Z\" fill=\"#787878\" fill-opacity=\"0.6303\"/>\n<path d=\"M3.3035 11.8437C3.53563 11.8437 3.7238 11.6555 3.7238 11.4234C3.7238 11.1913 3.53563 11.0031 3.3035 11.0031C3.07137 11.0031 2.8832 11.1913 2.8832 11.4234C2.8832 11.6555 3.07137 11.8437 3.3035 11.8437Z\" fill=\"#787878\" fill-opacity=\"0.6309\"/>\n<path d=\"M4.6292 6.5196C4.8621 6.5196 5.0509 6.3308 5.0509 6.0979C5.0509 5.865 4.8621 5.6762 4.6292 5.6762C4.3963 5.6762 4.2075 5.865 4.2075 6.0979C4.2075 6.3308 4.3963 6.5196 4.6292 6.5196Z\" fill=\"#787878\" fill-opacity=\"0.633\"/>\n<path d=\"M9.312 16.9676C9.54512 16.9676 9.7341 16.7786 9.7341 16.5455C9.7341 16.3124 9.54512 16.1234 9.312 16.1234C9.07888 16.1234 8.8899 16.3124 8.8899 16.5455C8.8899 16.7786 9.07888 16.9676 9.312 16.9676Z\" fill=\"#787878\" fill-opacity=\"0.6336\"/>\n<path d=\"M14.3324 15.2345C14.5659 15.2345 14.7552 15.0452 14.7552 14.8117C14.7552 14.5782 14.5659 14.3889 14.3324 14.3889C14.0989 14.3889 13.9096 14.5782 13.9096 14.8117C13.9096 15.0452 14.0989 15.2345 14.3324 15.2345Z\" fill=\"#787878\" fill-opacity=\"0.6346\"/>\n<path d=\"M11.9646 16.4701C12.1985 16.4701 12.3882 16.2804 12.3882 16.0465C12.3882 15.8126 12.1985 15.6229 11.9646 15.6229C11.7307 15.6229 11.541 15.8126 11.541 16.0465C11.541 16.2804 11.7307 16.4701 11.9646 16.4701Z\" fill=\"#797979\" fill-opacity=\"0.6358\"/>\n<path d=\"M14.2158 5.7418C14.45 5.7418 14.6398 5.55197 14.6398 5.3178C14.6398 5.08363 14.45 4.8938 14.2158 4.8938C13.9816 4.8938 13.7918 5.08363 13.7918 5.3178C13.7918 5.55197 13.9816 5.7418 14.2158 5.7418Z\" fill=\"#797979\" fill-opacity=\"0.6364\"/>\n<path d=\"M15.6732 7.8987C15.9077 7.8987 16.0978 7.7086 16.0978 7.4741C16.0978 7.2396 15.9077 7.0495 15.6732 7.0495C15.4387 7.0495 15.2486 7.2396 15.2486 7.4741C15.2486 7.7086 15.4387 7.8987 15.6732 7.8987Z\" fill=\"#797979\" fill-opacity=\"0.6373\"/>\n<path d=\"M4.2005 9.1939C4.4361 9.1939 4.6271 9.0029 4.6271 8.7673C4.6271 8.53169 4.4361 8.3407 4.2005 8.3407C3.9649 8.3407 3.7739 8.53169 3.7739 8.7673C3.7739 9.0029 3.9649 9.1939 4.2005 9.1939Z\" fill=\"#797979\" fill-opacity=\"0.6401\"/>\n<path d=\"M3.7848 14.9861C4.04465 14.9861 4.2553 14.7754 4.2553 14.5156C4.2553 14.2558 4.04465 14.0451 3.7848 14.0451C3.52495 14.0451 3.3143 14.2558 3.3143 14.5156C3.3143 14.7754 3.52495 14.9861 3.7848 14.9861Z\" fill=\"#878787\" fill-opacity=\"0.6446\"/>\n<path d=\"M16.9651 13.5719C17.2251 13.5719 17.4359 13.3611 17.4359 13.1011C17.4359 12.8411 17.2251 12.6303 16.9651 12.6303C16.7051 12.6303 16.4943 12.8411 16.4943 13.1011C16.4943 13.3611 16.7051 13.5719 16.9651 13.5719Z\" fill=\"#878787\" fill-opacity=\"0.645\"/>\n<path d=\"M17.3643 10.4722C17.6251 10.4722 17.8365 10.2608 17.8365 10C17.8365 9.73921 17.6251 9.5278 17.3643 9.5278C17.1035 9.5278 16.8921 9.73921 16.8921 10C16.8921 10.2608 17.1035 10.4722 17.3643 10.4722Z\" fill=\"#888888\" fill-opacity=\"0.6469\"/>\n<path d=\"M6.3469 4.1452C6.60785 4.1452 6.8194 3.93365 6.8194 3.6727C6.8194 3.41175 6.60785 3.2002 6.3469 3.2002C6.08595 3.2002 5.8744 3.41175 5.8744 3.6727C5.8744 3.93365 6.08595 4.1452 6.3469 4.1452Z\" fill=\"#888888\" fill-opacity=\"0.6473\"/>\n<path d=\"M9.2425 3.2656C9.50362 3.2656 9.7153 3.05392 9.7153 2.7928C9.7153 2.53168 9.50362 2.32 9.2425 2.32C8.98138 2.32 8.7697 2.53168 8.7697 2.7928C8.7697 3.05392 8.98138 3.2656 9.2425 3.2656Z\" fill=\"#888888\" fill-opacity=\"0.6477\"/>\n<path d=\"M12.2101 3.6714C12.4715 3.6714 12.6834 3.4595 12.6834 3.1981C12.6834 2.9367 12.4715 2.7248 12.2101 2.7248C11.9487 2.7248 11.7368 2.9367 11.7368 3.1981C11.7368 3.4595 11.9487 3.6714 12.2101 3.6714Z\" fill=\"#888888\" fill-opacity=\"0.6484\"/>\n<path d=\"M3.0612 11.9485C3.32276 11.9485 3.5348 11.7365 3.5348 11.4749C3.5348 11.2133 3.32276 11.0013 3.0612 11.0013C2.79964 11.0013 2.5876 11.2133 2.5876 11.4749C2.5876 11.7365 2.79964 11.9485 3.0612 11.9485Z\" fill=\"#888888\" fill-opacity=\"0.6488\"/>\n<path d=\"M6.5356 16.475C6.79766 16.475 7.0101 16.2626 7.0101 16.0005C7.0101 15.7384 6.79766 15.526 6.5356 15.526C6.27354 15.526 6.0611 15.7384 6.0611 16.0005C6.0611 16.2626 6.27354 16.475 6.5356 16.475Z\" fill=\"#888888\" fill-opacity=\"0.65\"/>\n<path d=\"M14.4942 15.467C14.7569 15.467 14.9699 15.254 14.9699 14.9913C14.9699 14.7286 14.7569 14.5156 14.4942 14.5156C14.2315 14.5156 14.0185 14.7286 14.0185 14.9913C14.0185 15.254 14.2315 15.467 14.4942 15.467Z\" fill=\"#898989\" fill-opacity=\"0.6516\"/>\n<path d=\"M4.6304 6.5748C4.89334 6.5748 5.1065 6.36164 5.1065 6.0987C5.1065 5.83576 4.89334 5.6226 4.6304 5.6226C4.36746 5.6226 4.1543 5.83576 4.1543 6.0987C4.1543 6.36164 4.36746 6.5748 4.6304 6.5748Z\" fill=\"#898989\" fill-opacity=\"0.6521\"/>\n<path d=\"M9.3123 17.0195C9.57541 17.0195 9.7887 16.8062 9.7887 16.5431C9.7887 16.28 9.57541 16.0667 9.3123 16.0667C9.04919 16.0667 8.8359 16.28 8.8359 16.5431C8.8359 16.8062 9.04919 17.0195 9.3123 17.0195Z\" fill=\"#898989\" fill-opacity=\"0.6526\"/>\n<path d=\"M12.0105 16.6644C12.2738 16.6644 12.4873 16.4509 12.4873 16.1876C12.4873 15.9243 12.2738 15.7108 12.0105 15.7108C11.7472 15.7108 11.5337 15.9243 11.5337 16.1876C11.5337 16.4509 11.7472 16.6644 12.0105 16.6644Z\" fill=\"#898989\" fill-opacity=\"0.6531\"/>\n<path d=\"M14.3145 5.6854C14.578 5.6854 14.7916 5.4718 14.7916 5.2083C14.7916 4.94481 14.578 4.7312 14.3145 4.7312C14.051 4.7312 13.8374 4.94481 13.8374 5.2083C13.8374 5.4718 14.051 5.6854 14.3145 5.6854Z\" fill=\"#898989\" fill-opacity=\"0.6535\"/>\n<path d=\"M15.6655 7.9559C15.9297 7.9559 16.1439 7.74171 16.1439 7.4775C16.1439 7.21329 15.9297 6.9991 15.6655 6.9991C15.4013 6.9991 15.1871 7.21329 15.1871 7.4775C15.1871 7.74171 15.4013 7.9559 15.6655 7.9559Z\" fill=\"#898989\" fill-opacity=\"0.6553\"/>\n<path d=\"M4.0622 9.217C4.3268 9.217 4.5413 9.0025 4.5413 8.7379C4.5413 8.4733 4.3268 8.2588 4.0622 8.2588C3.7976 8.2588 3.5831 8.4733 3.5831 8.7379C3.5831 9.0025 3.7976 9.217 4.0622 9.217Z\" fill=\"#8A8A8A\" fill-opacity=\"0.6562\"/>\n<path d=\"M3.7083 15.1002C4.00046 15.1002 4.2373 14.8634 4.2373 14.5712C4.2373 14.279 4.00046 14.0422 3.7083 14.0422C3.41614 14.0422 3.1793 14.279 3.1793 14.5712C3.1793 14.8634 3.41614 15.1002 3.7083 15.1002Z\" fill=\"#999999\" fill-opacity=\"0.6663\"/>\n<path d=\"M17.0509 13.6685C17.3432 13.6685 17.5801 13.4316 17.5801 13.1393C17.5801 12.847 17.3432 12.6101 17.0509 12.6101C16.7586 12.6101 16.5217 12.847 16.5217 13.1393C16.5217 13.4316 16.7586 13.6685 17.0509 13.6685Z\" fill=\"#999999\" fill-opacity=\"0.6666\"/>\n<path d=\"M12.276 3.5255C12.5689 3.5255 12.8064 3.28803 12.8064 2.9951C12.8064 2.70217 12.5689 2.4647 12.276 2.4647C11.9831 2.4647 11.7456 2.70217 11.7456 2.9951C11.7456 3.28803 11.9831 3.5255 12.276 3.5255Z\" fill=\"#999999\" fill-opacity=\"0.6681\"/>\n<path d=\"M9.2331 3.2341C9.52609 3.2341 9.7636 2.99659 9.7636 2.7036C9.7636 2.41061 9.52609 2.1731 9.2331 2.1731C8.94011 2.1731 8.7026 2.41061 8.7026 2.7036C8.7026 2.99659 8.94011 3.2341 9.2331 3.2341Z\" fill=\"#999999\" fill-opacity=\"0.6683\"/>\n<path d=\"M17.3172 10.5306C17.6102 10.5306 17.8478 10.293 17.8478 10C17.8478 9.70696 17.6102 9.4694 17.3172 9.4694C17.0242 9.4694 16.7866 9.70696 16.7866 10C16.7866 10.293 17.0242 10.5306 17.3172 10.5306Z\" fill=\"#999999\" fill-opacity=\"0.6683\"/>\n<path d=\"M2.853 12.0497C3.14604 12.0497 3.3836 11.8121 3.3836 11.5191C3.3836 11.2261 3.14604 10.9885 2.853 10.9885C2.55996 10.9885 2.3224 11.2261 2.3224 11.5191C2.3224 11.8121 2.55996 12.0497 2.853 12.0497Z\" fill=\"#999999\" fill-opacity=\"0.6684\"/>\n<path d=\"M6.3708 4.2448C6.66395 4.2448 6.9016 4.00715 6.9016 3.714C6.9016 3.42085 6.66395 3.1832 6.3708 3.1832C6.07765 3.1832 5.84 3.42085 5.84 3.714C5.84 4.00715 6.07765 4.2448 6.3708 4.2448Z\" fill=\"#999999\" fill-opacity=\"0.6686\"/>\n<path d=\"M14.6338 15.6783C14.9276 15.6783 15.1658 15.4401 15.1658 15.1463C15.1658 14.8525 14.9276 14.6143 14.6338 14.6143C14.34 14.6143 14.1018 14.8525 14.1018 15.1463C14.1018 15.4401 14.34 15.6783 14.6338 15.6783Z\" fill=\"#999999\" fill-opacity=\"0.67\"/>\n<path d=\"M6.5616 16.4876C6.85547 16.4876 7.0937 16.2494 7.0937 15.9555C7.0937 15.6616 6.85547 15.4234 6.5616 15.4234C6.26773 15.4234 6.0295 15.6616 6.0295 15.9555C6.0295 16.2494 6.26773 16.4876 6.5616 16.4876Z\" fill=\"#999999\" fill-opacity=\"0.6702\"/>\n<path d=\"M12.0554 16.8586C12.3497 16.8586 12.5883 16.62 12.5883 16.3257C12.5883 16.0314 12.3497 15.7928 12.0554 15.7928C11.7611 15.7928 11.5225 16.0314 11.5225 16.3257C11.5225 16.62 11.7611 16.8586 12.0554 16.8586Z\" fill=\"#999999\" fill-opacity=\"0.6712\"/>\n<path d=\"M4.6431 6.641C4.93747 6.641 5.1761 6.40237 5.1761 6.108C5.1761 5.81363 4.93747 5.575 4.6431 5.575C4.34873 5.575 4.1101 5.81363 4.1101 6.108C4.1101 6.40237 4.34873 6.641 4.6431 6.641Z\" fill=\"#999999\" fill-opacity=\"0.6713\"/>\n<path d=\"M14.4113 5.6339C14.7057 5.6339 14.9444 5.39522 14.9444 5.1008C14.9444 4.80638 14.7057 4.5677 14.4113 4.5677C14.1169 4.5677 13.8782 4.80638 13.8782 5.1008C13.8782 5.39522 14.1169 5.6339 14.4113 5.6339Z\" fill=\"#999999\" fill-opacity=\"0.6715\"/>\n<path d=\"M9.314 17.06C9.60848 17.06 9.8472 16.8213 9.8472 16.5268C9.8472 16.2323 9.60848 15.9936 9.314 15.9936C9.01952 15.9936 8.7808 16.2323 8.7808 16.5268C8.7808 16.8213 9.01952 17.06 9.314 17.06Z\" fill=\"#9A9A9A\" fill-opacity=\"0.6716\"/>\n<path d=\"M3.9248 9.2432C4.22 9.2432 4.4593 9.0039 4.4593 8.7087C4.4593 8.4135 4.22 8.1742 3.9248 8.1742C3.6296 8.1742 3.3903 8.4135 3.3903 8.7087C3.3903 9.0039 3.6296 9.2432 3.9248 9.2432Z\" fill=\"#9A9A9A\" fill-opacity=\"0.6731\"/>\n<path d=\"M15.6468 8.0205C15.9421 8.0205 16.1814 7.78115 16.1814 7.4859C16.1814 7.19065 15.9421 6.9513 15.6468 6.9513C15.3515 6.9513 15.1122 7.19065 15.1122 7.4859C15.1122 7.78115 15.3515 8.0205 15.6468 8.0205Z\" fill=\"#9A9A9A\" fill-opacity=\"0.6733\"/>\n<path d=\"M3.6899 15.1754C4.01624 15.1754 4.2808 14.9108 4.2808 14.5845C4.2808 14.2582 4.01624 13.9936 3.6899 13.9936C3.36355 13.9936 3.099 14.2582 3.099 14.5845C3.099 14.9108 3.36355 15.1754 3.6899 15.1754Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6888\"/>\n<path d=\"M17.0714 13.7393C17.3977 13.7393 17.6623 13.4747 17.6623 13.1484C17.6623 12.8221 17.3977 12.5575 17.0714 12.5575C16.7451 12.5575 16.4805 12.8221 16.4805 13.1484C16.4805 13.4747 16.7451 13.7393 17.0714 13.7393Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6888\"/>\n<path d=\"M12.3273 3.4286C12.6538 3.4286 12.9185 3.16391 12.9185 2.8374C12.9185 2.51089 12.6538 2.2462 12.3273 2.2462C12.0008 2.2462 11.7361 2.51089 11.7361 2.8374C11.7361 3.16391 12.0008 3.4286 12.3273 3.4286Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6891\"/>\n<path d=\"M2.6912 12.1448C3.01777 12.1448 3.2825 11.8801 3.2825 11.5535C3.2825 11.2269 3.01777 10.9622 2.6912 10.9622C2.36463 10.9622 2.0999 11.2269 2.0999 11.5535C2.0999 11.8801 2.36463 12.1448 2.6912 12.1448Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6892\"/>\n<path d=\"M9.231 3.2748C9.55762 3.2748 9.8224 3.01002 9.8224 2.6834C9.8224 2.35678 9.55762 2.092 9.231 2.092C8.90438 2.092 8.6396 2.35678 8.6396 2.6834C8.6396 3.01002 8.90438 3.2748 9.231 3.2748Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6894\"/>\n<path d=\"M17.2207 10.5916C17.5474 10.5916 17.8123 10.3267 17.8123 10C17.8123 9.67327 17.5474 9.4084 17.2207 9.4084C16.894 9.4084 16.6291 9.67327 16.6291 10C16.6291 10.3267 16.894 10.5916 17.2207 10.5916Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6896\"/>\n<path d=\"M6.4192 4.3895C6.74599 4.3895 7.0109 4.12459 7.0109 3.7978C7.0109 3.47101 6.74599 3.2061 6.4192 3.2061C6.09241 3.2061 5.8275 3.47101 5.8275 3.7978C5.8275 4.12459 6.09241 4.3895 6.4192 4.3895Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6897\"/>\n<path d=\"M14.7431 15.8594C15.0699 15.8594 15.3348 15.5945 15.3348 15.2677C15.3348 14.9409 15.0699 14.676 14.7431 14.676C14.4163 14.676 14.1514 14.9409 14.1514 15.2677C14.1514 15.5945 14.4163 15.8594 14.7431 15.8594Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6898\"/>\n<path d=\"M12.0971 17.0463C12.4241 17.0463 12.6892 16.7812 12.6892 16.4542C12.6892 16.1272 12.4241 15.8621 12.0971 15.8621C11.7701 15.8621 11.505 16.1272 11.505 16.4542C11.505 16.7812 11.7701 17.0463 12.0971 17.0463Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6902\"/>\n<path d=\"M6.611 16.462C6.93801 16.462 7.2031 16.1969 7.2031 15.8699C7.2031 15.5429 6.93801 15.2778 6.611 15.2778C6.28399 15.2778 6.0189 15.5429 6.0189 15.8699C6.0189 16.1969 6.28399 16.462 6.611 16.462Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6902\"/>\n<path d=\"M14.5014 5.5929C14.8285 5.5929 15.0936 5.32776 15.0936 5.0007C15.0936 4.67364 14.8285 4.4085 14.5014 4.4085C14.1743 4.4085 13.9092 4.67364 13.9092 5.0007C13.9092 5.32776 14.1743 5.5929 14.5014 5.5929Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6903\"/>\n<path d=\"M4.665 6.7163C4.99217 6.7163 5.2574 6.45107 5.2574 6.1239C5.2574 5.79673 4.99217 5.5315 4.665 5.5315C4.33783 5.5315 4.0726 5.79673 4.0726 6.1239C4.0726 6.45107 4.33783 6.7163 4.665 6.7163Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6905\"/>\n<path d=\"M9.3169 17.092C9.64407 17.092 9.9093 16.8268 9.9093 16.4996C9.9093 16.1724 9.64407 15.9072 9.3169 15.9072C8.98973 15.9072 8.7245 16.1724 8.7245 16.4996C8.7245 16.8268 8.98973 17.092 9.3169 17.092Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6906\"/>\n<path d=\"M3.7951 9.2738C4.12244 9.2738 4.3878 9.00844 4.3878 8.6811C4.3878 8.35376 4.12244 8.0884 3.7951 8.0884C3.46776 8.0884 3.2024 8.35376 3.2024 8.6811C3.2024 9.00844 3.46776 9.2738 3.7951 9.2738Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6909\"/>\n<path d=\"M15.6198 8.0908C15.9472 8.0908 16.2127 7.82535 16.2127 7.4979C16.2127 7.17045 15.9472 6.905 15.6198 6.905C15.2924 6.905 15.0269 7.17045 15.0269 7.4979C15.0269 7.82535 15.2924 8.0908 15.6198 8.0908Z\" fill=\"#AAAAAA\" fill-opacity=\"0.6911\"/>\n<path d=\"M15.5873 8.1208C15.9233 8.1208 16.1957 7.84841 16.1957 7.5124C16.1957 7.17639 15.9233 6.904 15.5873 6.904C15.2513 6.904 14.9789 7.17639 14.9789 7.5124C14.9789 7.84841 15.2513 8.1208 15.5873 8.1208Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7088\"/>\n<path d=\"M3.6805 9.2656C4.01673 9.2656 4.2893 8.99303 4.2893 8.6568C4.2893 8.32057 4.01673 8.048 3.6805 8.048C3.34427 8.048 3.0717 8.32057 3.0717 8.6568C3.0717 8.99303 3.34427 9.2656 3.6805 9.2656Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7093\"/>\n<path d=\"M9.3206 17.0731C9.65689 17.0731 9.9295 16.8005 9.9295 16.4642C9.9295 16.1279 9.65689 15.8553 9.3206 15.8553C8.98431 15.8553 8.7117 16.1279 8.7117 16.4642C8.7117 16.8005 8.98431 17.0731 9.3206 17.0731Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7094\"/>\n<path d=\"M4.6937 6.7537C5.02999 6.7537 5.3026 6.48109 5.3026 6.1448C5.3026 5.80851 5.02999 5.5359 4.6937 5.5359C4.35741 5.5359 4.0848 5.80851 4.0848 6.1448C4.0848 6.48109 4.35741 6.7537 4.6937 6.7537Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7095\"/>\n<path d=\"M6.6806 16.3584C7.01694 16.3584 7.2896 16.0857 7.2896 15.7494C7.2896 15.4131 7.01694 15.1404 6.6806 15.1404C6.34426 15.1404 6.0716 15.4131 6.0716 15.7494C6.0716 16.0857 6.34426 16.3584 6.6806 16.3584Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7096\"/>\n<path d=\"M14.5798 5.5229C14.9163 5.5229 15.1891 5.25011 15.1891 4.9136C15.1891 4.57709 14.9163 4.3043 14.5798 4.3043C14.2433 4.3043 13.9705 4.57709 13.9705 4.9136C13.9705 5.25011 14.2433 5.5229 14.5798 5.5229Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7099\"/>\n<path d=\"M12.1333 17.175C12.4699 17.175 12.7427 16.9022 12.7427 16.5656C12.7427 16.229 12.4699 15.9562 12.1333 15.9562C11.7967 15.9562 11.5239 16.229 11.5239 16.5656C11.5239 16.9022 11.7967 17.175 12.1333 17.175Z\" fill=\"#AEAEAE\" fill-opacity=\"0.71\"/>\n<path d=\"M6.4887 4.5278C6.82532 4.5278 7.0982 4.25492 7.0982 3.9183C7.0982 3.58168 6.82532 3.3088 6.4887 3.3088C6.15208 3.3088 5.8792 3.58168 5.8792 3.9183C5.8792 4.25492 6.15208 4.5278 6.4887 4.5278Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7101\"/>\n<path d=\"M17.0816 10.6096C17.4183 10.6096 17.6912 10.3367 17.6912 10C17.6912 9.66333 17.4183 9.3904 17.0816 9.3904C16.7449 9.3904 16.472 9.66333 16.472 10C16.472 10.3367 16.7449 10.6096 17.0816 10.6096Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7102\"/>\n<path d=\"M14.8153 15.9576C15.152 15.9576 15.425 15.6846 15.425 15.3479C15.425 15.0112 15.152 14.7382 14.8153 14.7382C14.4786 14.7382 14.2056 15.0112 14.2056 15.3479C14.2056 15.6846 14.4786 15.9576 14.8153 15.9576Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7104\"/>\n<path d=\"M9.2363 3.3434C9.57314 3.3434 9.8462 3.07034 9.8462 2.7335C9.8462 2.39666 9.57314 2.1236 9.2363 2.1236C8.89946 2.1236 8.6264 2.39666 8.6264 2.7335C8.6264 3.07034 8.89946 3.3434 9.2363 3.3434Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7105\"/>\n<path d=\"M2.5856 12.1862C2.9226 12.1862 3.1958 11.913 3.1958 11.576C3.1958 11.239 2.9226 10.9658 2.5856 10.9658C2.2486 10.9658 1.9754 11.239 1.9754 11.576C1.9754 11.913 2.2486 12.1862 2.5856 12.1862Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7109\"/>\n<path d=\"M12.3606 3.345C12.6977 3.345 12.9709 3.07176 12.9709 2.7347C12.9709 2.39764 12.6977 2.1244 12.3606 2.1244C12.0235 2.1244 11.7503 2.39764 11.7503 2.7347C11.7503 3.07176 12.0235 3.345 12.3606 3.345Z\" fill=\"#AEAEAE\" fill-opacity=\"0.711\"/>\n<path d=\"M17.0253 13.7383C17.3624 13.7383 17.6357 13.465 17.6357 13.1279C17.6357 12.7908 17.3624 12.5175 17.0253 12.5175C16.6882 12.5175 16.4149 12.7908 16.4149 13.1279C16.4149 13.465 16.6882 13.7383 17.0253 13.7383Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7111\"/>\n<path d=\"M3.7307 15.1653C4.06781 15.1653 4.3411 14.892 4.3411 14.5549C4.3411 14.2178 4.06781 13.9445 3.7307 13.9445C3.39359 13.9445 3.1203 14.2178 3.1203 14.5549C3.1203 14.892 3.39359 15.1653 3.7307 15.1653Z\" fill=\"#AEAEAE\" fill-opacity=\"0.7112\"/>\n<path d=\"M15.5514 8.1058C15.8703 8.1058 16.1288 7.84729 16.1288 7.5284C16.1288 7.20951 15.8703 6.951 15.5514 6.951C15.2325 6.951 14.974 7.20951 14.974 7.5284C14.974 7.84729 15.2325 8.1058 15.5514 8.1058Z\" fill=\"#A4A4A4\" fill-opacity=\"0.7263\"/>\n<path d=\"M9.3249 17.0018C9.64456 17.0018 9.9037 16.7427 9.9037 16.423C9.9037 16.1033 9.64456 15.8442 9.3249 15.8442C9.00524 15.8442 8.7461 16.1033 8.7461 16.423C8.7461 16.7427 9.00524 17.0018 9.3249 17.0018Z\" fill=\"#A4A4A4\" fill-opacity=\"0.7279\"/>\n<path d=\"M6.7657 16.1807C7.08536 16.1807 7.3445 15.9216 7.3445 15.6019C7.3445 15.2822 7.08536 15.0231 6.7657 15.0231C6.44604 15.0231 6.1869 15.2822 6.1869 15.6019C6.1869 15.9216 6.44604 16.1807 6.7657 16.1807Z\" fill=\"#A4A4A4\" fill-opacity=\"0.728\"/>\n<path d=\"M4.7276 6.7484C5.04737 6.7484 5.3066 6.48917 5.3066 6.1694C5.3066 5.84963 5.04737 5.5904 4.7276 5.5904C4.40783 5.5904 4.1486 5.84963 4.1486 6.1694C4.1486 6.48917 4.40783 6.7484 4.7276 6.7484Z\" fill=\"#A4A4A4\" fill-opacity=\"0.7282\"/>\n<path d=\"M3.5885 9.2163C3.90833 9.2163 4.1676 8.95703 4.1676 8.6372C4.1676 8.31737 3.90833 8.0581 3.5885 8.0581C3.26867 8.0581 3.0094 8.31737 3.0094 8.6372C3.0094 8.95703 3.26867 9.2163 3.5885 9.2163Z\" fill=\"#A4A4A4\" fill-opacity=\"0.7284\"/>\n<path d=\"M6.5749 4.6477C6.89528 4.6477 7.155 4.38798 7.155 4.0676C7.155 3.74722 6.89528 3.4875 6.5749 3.4875C6.25452 3.4875 5.9948 3.74722 5.9948 4.0676C5.9948 4.38798 6.25452 4.6477 6.5749 4.6477Z\" fill=\"#A4A4A4\" fill-opacity=\"0.7296\"/>\n<path d=\"M16.9089 10.5803C17.2294 10.5803 17.4892 10.3205 17.4892 10C17.4892 9.67951 17.2294 9.4197 16.9089 9.4197C16.5884 9.4197 16.3286 9.67951 16.3286 10C16.3286 10.3205 16.5884 10.5803 16.9089 10.5803Z\" fill=\"#A4A4A4\" fill-opacity=\"0.7299\"/>\n<path d=\"M14.6413 5.4257C14.9618 5.4257 15.2217 5.16585 15.2217 4.8453C15.2217 4.52475 14.9618 4.2649 14.6413 4.2649C14.3208 4.2649 14.0609 4.52475 14.0609 4.8453C14.0609 5.16585 14.3208 5.4257 14.6413 5.4257Z\" fill=\"#A4A4A4\" fill-opacity=\"0.73\"/>\n<path d=\"M12.1616 17.2333C12.4823 17.2333 12.7422 16.9734 12.7422 16.6527C12.7422 16.332 12.4823 16.0721 12.1616 16.0721C11.8409 16.0721 11.581 16.332 11.581 16.6527C11.581 16.9734 11.8409 17.2333 12.1616 17.2333Z\" fill=\"#A4A4A4\" fill-opacity=\"0.7303\"/>\n<path d=\"M9.2486 3.432C9.56964 3.432 9.8299 3.17174 9.8299 2.8507C9.8299 2.52966 9.56964 2.2694 9.2486 2.2694C8.92756 2.2694 8.6673 2.52966 8.6673 2.8507C8.6673 3.17174 8.92756 3.432 9.2486 3.432Z\" fill=\"#A5A5A5\" fill-opacity=\"0.7311\"/>\n<path d=\"M14.8458 15.9633C15.167 15.9633 15.4273 15.703 15.4273 15.3818C15.4273 15.0606 15.167 14.8003 14.8458 14.8003C14.5246 14.8003 14.2643 15.0606 14.2643 15.3818C14.2643 15.703 14.5246 15.9633 14.8458 15.9633Z\" fill=\"#A5A5A5\" fill-opacity=\"0.7313\"/>\n<path d=\"M16.9158 13.6617C17.2376 13.6617 17.4984 13.4009 17.4984 13.0791C17.4984 12.7573 17.2376 12.4965 16.9158 12.4965C16.594 12.4965 16.3332 12.7573 16.3332 13.0791C16.3332 13.4009 16.594 13.6617 16.9158 13.6617Z\" fill=\"#A5A5A5\" fill-opacity=\"0.7328\"/>\n<path d=\"M2.5431 12.1678C2.86497 12.1678 3.1259 11.9069 3.1259 11.585C3.1259 11.2631 2.86497 11.0022 2.5431 11.0022C2.22123 11.0022 1.9603 11.2631 1.9603 11.585C1.9603 11.9069 2.22123 12.1678 2.5431 12.1678Z\" fill=\"#A5A5A5\" fill-opacity=\"0.733\"/>\n<path d=\"M3.828 15.0671C4.14993 15.0671 4.4109 14.8061 4.4109 14.4842C4.4109 14.1623 4.14993 13.9013 3.828 13.9013C3.50607 13.9013 3.2451 14.1623 3.2451 14.4842C3.2451 14.8061 3.50607 15.0671 3.828 15.0671Z\" fill=\"#A5A5A5\" fill-opacity=\"0.733\"/>\n<path d=\"M12.3739 3.2767C12.6959 3.2767 12.9569 3.01568 12.9569 2.6937C12.9569 2.37172 12.6959 2.1107 12.3739 2.1107C12.0519 2.1107 11.7909 2.37172 11.7909 2.6937C11.7909 3.01568 12.0519 3.2767 12.3739 3.2767Z\" fill=\"#A5A5A5\" fill-opacity=\"0.7332\"/>\n<path d=\"M15.5134 8.0893C15.8138 8.0893 16.0574 7.84574 16.0574 7.5453C16.0574 7.24486 15.8138 7.0013 15.5134 7.0013C15.213 7.0013 14.9694 7.24486 14.9694 7.5453C14.9694 7.84574 15.213 8.0893 15.5134 8.0893Z\" fill=\"#9A9A9A\" fill-opacity=\"0.7435\"/>\n<path d=\"M6.8613 15.9817C7.16246 15.9817 7.4066 15.7376 7.4066 15.4364C7.4066 15.1352 7.16246 14.8911 6.8613 14.8911C6.56014 14.8911 6.316 15.1352 6.316 15.4364C6.316 15.7376 6.56014 15.9817 6.8613 15.9817Z\" fill=\"#9A9A9A\" fill-opacity=\"0.7453\"/>\n<path d=\"M9.3297 16.9235C9.6313 16.9235 9.8758 16.679 9.8758 16.3774C9.8758 16.0758 9.6313 15.8313 9.3297 15.8313C9.0281 15.8313 8.7836 16.0758 8.7836 16.3774C8.7836 16.679 9.0281 16.9235 9.3297 16.9235Z\" fill=\"#9A9A9A\" fill-opacity=\"0.7462\"/>\n<path d=\"M4.7651 6.743C5.06687 6.743 5.3115 6.49837 5.3115 6.1966C5.3115 5.89483 5.06687 5.6502 4.7651 5.6502C4.46333 5.6502 4.2187 5.89483 4.2187 6.1966C4.2187 6.49837 4.46333 6.743 4.7651 6.743Z\" fill=\"#9A9A9A\" fill-opacity=\"0.7467\"/>\n<path d=\"M3.5257 9.1711C3.82791 9.1711 4.0729 8.92611 4.0729 8.6239C4.0729 8.32169 3.82791 8.0767 3.5257 8.0767C3.22349 8.0767 2.9785 8.32169 2.9785 8.6239C2.9785 8.92611 3.22349 9.1711 3.5257 9.1711Z\" fill=\"#9B9B9B\" fill-opacity=\"0.7477\"/>\n<path d=\"M6.6726 4.7842C6.97492 4.7842 7.22 4.53912 7.22 4.2368C7.22 3.93448 6.97492 3.6894 6.6726 3.6894C6.37028 3.6894 6.1252 3.93448 6.1252 4.2368C6.1252 4.53912 6.37028 4.7842 6.6726 4.7842Z\" fill=\"#9B9B9B\" fill-opacity=\"0.748\"/>\n<path d=\"M16.7129 10.5477C17.0154 10.5477 17.2606 10.3025 17.2606 10C17.2606 9.69751 17.0154 9.4523 16.7129 9.4523C16.4104 9.4523 16.1652 9.69751 16.1652 10C16.1652 10.3025 16.4104 10.5477 16.7129 10.5477Z\" fill=\"#9B9B9B\" fill-opacity=\"0.7484\"/>\n<path d=\"M14.6815 5.3499C14.9848 5.3499 15.2307 5.10401 15.2307 4.8007C15.2307 4.49739 14.9848 4.2515 14.6815 4.2515C14.3782 4.2515 14.1323 4.49739 14.1323 4.8007C14.1323 5.10401 14.3782 5.3499 14.6815 5.3499Z\" fill=\"#9B9B9B\" fill-opacity=\"0.7505\"/>\n<path d=\"M9.2672 3.5768C9.57057 3.5768 9.8165 3.33087 9.8165 3.0275C9.8165 2.72413 9.57057 2.4782 9.2672 2.4782C8.96383 2.4782 8.7179 2.72413 8.7179 3.0275C8.7179 3.33087 8.96383 3.5768 9.2672 3.5768Z\" fill=\"#9B9B9B\" fill-opacity=\"0.7506\"/>\n<path d=\"M12.1799 17.2587C12.4834 17.2587 12.7294 17.0127 12.7294 16.7092C12.7294 16.4057 12.4834 16.1597 12.1799 16.1597C11.8764 16.1597 11.6304 16.4057 11.6304 16.7092C11.6304 17.0127 11.8764 17.2587 12.1799 17.2587Z\" fill=\"#9B9B9B\" fill-opacity=\"0.7509\"/>\n<path d=\"M14.8324 15.9174C15.1364 15.9174 15.3828 15.671 15.3828 15.367C15.3828 15.063 15.1364 14.8166 14.8324 14.8166C14.5284 14.8166 14.282 15.063 14.282 15.367C14.282 15.671 14.5284 15.9174 14.8324 15.9174Z\" fill=\"#9B9B9B\" fill-opacity=\"0.7521\"/>\n<path d=\"M16.7495 13.5564C17.054 13.5564 17.3008 13.3096 17.3008 13.0051C17.3008 12.7006 17.054 12.4538 16.7495 12.4538C16.445 12.4538 16.1982 12.7006 16.1982 13.0051C16.1982 13.3096 16.445 13.5564 16.7495 13.5564Z\" fill=\"#9C9C9C\" fill-opacity=\"0.7533\"/>\n<path d=\"M3.9757 14.9285C4.28034 14.9285 4.5273 14.6815 4.5273 14.3769C4.5273 14.0723 4.28034 13.8253 3.9757 13.8253C3.67106 13.8253 3.4241 14.0723 3.4241 14.3769C3.4241 14.6815 3.67106 14.9285 3.9757 14.9285Z\" fill=\"#9C9C9C\" fill-opacity=\"0.7537\"/>\n<path d=\"M2.5667 12.1324C2.87178 12.1324 3.1191 11.8851 3.1191 11.58C3.1191 11.2749 2.87178 11.0276 2.5667 11.0276C2.26162 11.0276 2.0143 11.2749 2.0143 11.58C2.0143 11.8851 2.26162 12.1324 2.5667 12.1324Z\" fill=\"#9C9C9C\" fill-opacity=\"0.7548\"/>\n<path d=\"M12.3663 3.27C12.6715 3.27 12.919 3.02255 12.919 2.7173C12.919 2.41205 12.6715 2.1646 12.3663 2.1646C12.0611 2.1646 11.8136 2.41205 11.8136 2.7173C11.8136 3.02255 12.0611 3.27 12.3663 3.27Z\" fill=\"#9C9C9C\" fill-opacity=\"0.7552\"/>\n<path d=\"M15.4738 8.0712C15.7545 8.0712 15.9821 7.84363 15.9821 7.5629C15.9821 7.28217 15.7545 7.0546 15.4738 7.0546C15.1931 7.0546 14.9655 7.28217 14.9655 7.5629C14.9655 7.84363 15.1931 8.0712 15.4738 8.0712Z\" fill=\"#909090\" fill-opacity=\"0.7605\"/>\n<path d=\"M6.9621 15.7705C7.2431 15.7705 7.4709 15.5427 7.4709 15.2617C7.4709 14.9807 7.2431 14.7529 6.9621 14.7529C6.6811 14.7529 6.4533 14.9807 6.4533 15.2617C6.4533 15.5427 6.6811 15.7705 6.9621 15.7705Z\" fill=\"#909090\" fill-opacity=\"0.7613\"/>\n<path d=\"M9.3349 16.8392C9.61701 16.8392 9.8457 16.6105 9.8457 16.3284C9.8457 16.0463 9.61701 15.8176 9.3349 15.8176C9.05279 15.8176 8.8241 16.0463 8.8241 16.3284C8.8241 16.6105 9.05279 16.8392 9.3349 16.8392Z\" fill=\"#919191\" fill-opacity=\"0.7642\"/>\n<path d=\"M4.8058 6.7374C5.08813 6.7374 5.317 6.50853 5.317 6.2262C5.317 5.94387 5.08813 5.715 4.8058 5.715C4.52347 5.715 4.2946 5.94387 4.2946 6.2262C4.2946 6.50853 4.52347 6.7374 4.8058 6.7374Z\" fill=\"#919191\" fill-opacity=\"0.7648\"/>\n<path d=\"M6.7764 4.928C7.05884 4.928 7.2878 4.69904 7.2878 4.4166C7.2878 4.13416 7.05884 3.9052 6.7764 3.9052C6.49396 3.9052 6.265 4.13416 6.265 4.4166C6.265 4.69904 6.49396 4.928 6.7764 4.928Z\" fill=\"#919191\" fill-opacity=\"0.7651\"/>\n<path d=\"M16.5043 10.5118C16.787 10.5118 17.0161 10.2827 17.0161 10C17.0161 9.71734 16.787 9.4882 16.5043 9.4882C16.2216 9.4882 15.9925 9.71734 15.9925 10C15.9925 10.2827 16.2216 10.5118 16.5043 10.5118Z\" fill=\"#919191\" fill-opacity=\"0.7657\"/>\n<path d=\"M3.4974 9.1305C3.78056 9.1305 4.0101 8.90096 4.0101 8.6178C4.0101 8.33464 3.78056 8.1051 3.4974 8.1051C3.21424 8.1051 2.9847 8.33464 2.9847 8.6178C2.9847 8.90096 3.21424 9.1305 3.4974 9.1305Z\" fill=\"#919191\" fill-opacity=\"0.7671\"/>\n<path d=\"M9.2909 3.7672C9.57461 3.7672 9.8046 3.53721 9.8046 3.2535C9.8046 2.96979 9.57461 2.7398 9.2909 2.7398C9.00719 2.7398 8.7772 2.96979 8.7772 3.2535C8.7772 3.53721 9.00719 3.7672 9.2909 3.7672Z\" fill=\"#919191\" fill-opacity=\"0.7685\"/>\n<path d=\"M14.6968 5.2989C14.9814 5.2989 15.2121 5.06819 15.2121 4.7836C15.2121 4.49901 14.9814 4.2683 14.6968 4.2683C14.4122 4.2683 14.1815 4.49901 14.1815 4.7836C14.1815 5.06819 14.4122 5.2989 14.6968 5.2989Z\" fill=\"#929292\" fill-opacity=\"0.7709\"/>\n<path d=\"M12.1868 17.2459C12.4716 17.2459 12.7025 17.015 12.7025 16.7302C12.7025 16.4454 12.4716 16.2145 12.1868 16.2145C11.902 16.2145 11.6711 16.4454 11.6711 16.7302C11.6711 17.015 11.902 17.2459 12.1868 17.2459Z\" fill=\"#929292\" fill-opacity=\"0.7714\"/>\n<path d=\"M14.7758 15.8202C15.0608 15.8202 15.2919 15.5891 15.2919 15.3041C15.2919 15.0191 15.0608 14.788 14.7758 14.788C14.4908 14.788 14.2597 15.0191 14.2597 15.3041C14.2597 15.5891 14.4908 15.8202 14.7758 15.8202Z\" fill=\"#929292\" fill-opacity=\"0.7721\"/>\n<path d=\"M16.5365 13.4264C16.8216 13.4264 17.0527 13.1953 17.0527 12.9102C17.0527 12.6251 16.8216 12.394 16.5365 12.394C16.2514 12.394 16.0203 12.6251 16.0203 12.9102C16.0203 13.1953 16.2514 13.4264 16.5365 13.4264Z\" fill=\"#929292\" fill-opacity=\"0.7722\"/>\n<path d=\"M4.1651 14.7559C4.45041 14.7559 4.6817 14.5246 4.6817 14.2393C4.6817 13.954 4.45041 13.7227 4.1651 13.7227C3.87979 13.7227 3.6485 13.954 3.6485 14.2393C3.6485 14.5246 3.87979 14.7559 4.1651 14.7559Z\" fill=\"#929292\" fill-opacity=\"0.7728\"/>\n<path d=\"M2.6554 12.0797C2.94181 12.0797 3.174 11.8475 3.174 11.5611C3.174 11.2747 2.94181 11.0425 2.6554 11.0425C2.36899 11.0425 2.1368 11.2747 2.1368 11.5611C2.1368 11.8475 2.36899 12.0797 2.6554 12.0797Z\" fill=\"#939393\" fill-opacity=\"0.7758\"/>\n<path d=\"M12.338 3.3234C12.6246 3.3234 12.857 3.09104 12.857 2.8044C12.857 2.51776 12.6246 2.2854 12.338 2.2854C12.0514 2.2854 11.819 2.51776 11.819 2.8044C11.819 3.09104 12.0514 3.3234 12.338 3.3234Z\" fill=\"#939393\" fill-opacity=\"0.7764\"/>\n</g>\n</g>\n</svg></div>",
+      "css": ".ds-orb{display:block;width:20px;height:20px;flex:0 0 auto}"
+    }
+  ],
+  "narrative": {
+    "northStar": "MYMIND Command",
+    "overview": "Midnight aerospace materials frame a substantial working plan beside one persistent local conversation. The interface is dense enough for real planning, with clear type, quiet working rows, restrained metadata and cyan actions. IBM Plex Sans carries the work; Oxanium identifies MYMIND without taking over the interface.\n\nThis documents the implemented approved D — Complete workflow, not a new visual direction. Calendar, Tasks, editors, Categories and Settings keep the same right-hand conversation available. Assistant enlarges that conversation while retaining a useful visible plan. The pinned [approved Figma workflow](https://www.figma.com/design/SPe2aVUSaUNqmI5Gmnvv1F/MYMIND-wireframe?node-id=68-2825) supplies the visual authority; actual source supplies the measurements and behavior recorded here.",
+    "keyCharacteristics": [
+      "A visible plan and one persistent right-hand conversation.",
+      "Midnight tonal surfaces, crisp boundaries and cyan action cues.",
+      "Readable working rows with restrained secondary metadata.",
+      "Deliberate voice review, truthful progress and recoverable work."
+    ],
+    "rules": [
+      {
+        "name": "The Material Boundary Rule",
+        "body": "Use `boundary` on interactive fields and outlined containers; use `line` for internal rows and date grids. Preserve the tonal difference between the working surface, navigation surface and raised controls.",
+        "section": "colors"
+      },
+      {
+        "name": "The Identity Restraint Rule",
+        "body": "Keep Oxanium on MYMIND identity. Use IBM Plex Sans for headings, planner content, fields, conversation and controls.",
+        "section": "typography"
+      },
+      {
+        "name": "The Persistent Plan Rule",
+        "body": "Keep the working plan beside the same conversation, including editors and compact windows. Pin composer and editor actions while their content scrolls.",
+        "section": "layout"
+      },
+      {
+        "name": "The Quiet Depth Rule",
+        "body": "Use tonal layering for persistent working surfaces. Reserve the observed shadows for their transient popup, dialog and toast roles.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Deliberate Voice Rule",
+        "body": "Preserve Record → same-button Stop → final transcription with live text retained → editable composer → explicit Send. Recording continues through pauses and tab changes. Keep cancellation, saved-dictation recovery, transcript versions, optional voice sessions, spoken replies and Stop response reachable; do not send merely because recording stops.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do keep a substantial visible plan beside one persistent conversation.",
+      "Do use the actual source tokens, local fonts, approved SVG navigation and Thinking Orbs runtime.",
+      "Do preserve pinned composer and editor actions at 900×600.",
+      "Do keep weekday/date pairs readable through horizontal Calendar scrolling.",
+      "Do show real progress, saved results, retry, recovery and applicable Undo actions.",
+      "Do preserve the deliberate voice sequence and shared Date behavior."
+    ],
+    "donts": [
+      "Don't replace working rows with a second dashboard of decorative cards.",
+      "Don't apply Oxanium to content or replace the approved midnight aerospace world.",
+      "Don't invent progress, send voice text automatically or discard retained transcripts.",
+      "Don't imply that setting Date alone creates Calendar placement.",
+      "Don't animate reduced-motion orb states or compress overview dates to fit the pane."
+    ]
+  }
+}

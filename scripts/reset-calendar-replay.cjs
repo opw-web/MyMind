@@ -1,0 +1,15 @@
+// Explicitly authorized full planner reset, gated on packaged verification.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{DatabaseSync}=require('node:sqlite');
+const root=path.resolve(__dirname,'..'),report=JSON.parse(fs.readFileSync(path.join(root,'test-results','calendar-linked-packaged.json'),'utf8'));assert.equal(report.passed,true);
+if(process.argv[2]!=='--apply')throw new Error('Use --apply only after the user-authorized reset is ready.');
+const closed=require('node:child_process').spawnSync('powershell.exe',['-NoProfile','-Command',"if (Get-Process MYMIND -ErrorAction SilentlyContinue) { exit 1 }"],{windowsHide:true});assert.equal(closed.status,0,'Close MYMIND before resetting its planner.');
+const dataDir=path.resolve(process.env.LOCALAPPDATA,'MYMIND'),file=path.join(dataDir,'planner.sqlite');
+const installedApp=path.resolve(process.env.LOCALAPPDATA,'Programs','MYMIND','resources','app');assert.ok(fs.existsSync(path.join(installedApp,'package.json')));
+const backupDir=path.resolve(process.env.LOCALAPPDATA,'MYMIND-backups',`calendar-fix-${new Date().toISOString().replace(/[:.]/g,'-')}`);assert.ok(!backupDir.startsWith(dataDir+path.sep));fs.mkdirSync(backupDir,{recursive:true});
+const source=new DatabaseSync(file),backupFile=path.join(backupDir,'planner.sqlite');const tables=['tasks','events','projects','sections','categories','history','requests'];
+const counts=db=>Object.fromEntries(tables.map(table=>[table,Number(db.prepare(`SELECT count(*) AS n FROM ${table}`).get().n)]));const before=counts(source);
+source.prepare('VACUUM INTO ?').run(backupFile);source.close();const backup=new DatabaseSync(backupFile,{readOnly:true});assert.deepEqual(counts(backup),before);assert.equal(backup.prepare('PRAGMA integrity_check').get().integrity_check,'ok');backup.close();
+fs.cpSync(path.join(installedApp,'dist'),path.join(backupDir,'app-dist'),{recursive:true});
+fs.cpSync(path.join(root,'dist'),path.join(installedApp,'dist'),{recursive:true,force:true});
+const {PlannerDatabase}=require('../dist/main/database');const db=new PlannerDatabase(file);try{db.db.exec('BEGIN IMMEDIATE');try{db.db.exec('DELETE FROM tasks; DELETE FROM events; DELETE FROM sections; DELETE FROM projects; DELETE FROM categories; DELETE FROM history; DELETE FROM requests;');db.db.prepare('INSERT INTO projects VALUES (?,?)').run('inbox',JSON.stringify({id:'inbox',title:'Inbox',order:0}));db.db.prepare("UPDATE meta SET value='0' WHERE key='revision'").run();db.db.exec('COMMIT');}catch(error){db.db.exec('ROLLBACK');throw error;}db.preferences({timezone:'Asia/Kolkata',year:2026});assert.equal(db.snapshot().tasks.length,0);assert.equal(db.snapshot().events.length,0);assert.equal(db.snapshot().projects.length,1);assert.equal(db.snapshot().canUndo,false);
+ const result={passed:true,backupDir,backupFile,dataDir,installedApp,before,after:counts(db.db)};fs.writeFileSync(path.join(root,'test-results','calendar-reset.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));}finally{db.close();}

@@ -2,6 +2,11 @@ const {build,Platform,Arch}=require('electron-builder');
 const {WineVmManager}=require('app-builder-lib/out/vm/WineVm');
 const {UninstallerReader}=require('app-builder-lib/out/targets/nsis/nsisUtil');
 const path=require('node:path');
+const MsiTarget=require('app-builder-lib/out/targets/MsiTarget').default;
+// LZX maximum compression is disproportionately slow for gigabytes of neural
+// weights. MSZIP keeps a standard embedded-cab MSI with the same payload.
+const originalMsiOptions=MsiTarget.prototype.getBaseOptions;
+MsiTarget.prototype.getBaseOptions=async function(options){return {...await originalMsiOptions.call(this,options),compressionLevel:'mszip'};};
 // Keep the Windows environment when the builder runs its temporary NSIS stub.
 // If Windows cannot spawn that stub, use the builder's own static NSIS reader
 // (also used for macOS packaging) to extract the same uninstaller artifact.

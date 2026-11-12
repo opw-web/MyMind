@@ -5,8 +5,8 @@ import {prepareDraft,searchWords} from '../src/main/draft';
 test('new project/section/task names resolve as one atomic draft, including temporary model references',()=>{
   const db=new PlannerDatabase(':memory:');try{
     const draft=prepareDraft(db.snapshot(),[],[{action:'create',entity:'project',fields:{title:'School'}},{action:'create',entity:'section',fields:{title:'Homework',projectId:'school-new-id'}},{action:'create',entity:'task',fields:{title:'Math worksheet',sectionId:'homework-new-id',dueDate:'2026-10-10'}}]);
-    const staged=db.preview(draft,0);assert.equal(staged.changes[1].fields!.projectId,staged.changes[0].id);assert.equal(staged.changes[2].fields!.projectId,staged.changes[0].id);assert.equal(staged.changes[2].fields!.sectionId,staged.changes[1].id);
-    const repeated=prepareDraft(db.snapshot(),staged.changes,[{action:'create',entity:'project',fields:{title:'School'}},{action:'create',entity:'section',fields:{title:'Homework',projectTitle:'School'}},{action:'create',entity:'task',fields:{title:'Math worksheet',sectionTitle:'Homework',dueDate:'2026-10-10'}}]);assert.equal(repeated.length,3);db.preview(repeated,0);
+    const staged=db.preview(draft,0);const ordered=staged.changes.filter(c=>c.entity!=='category');assert.equal(ordered[1].fields!.projectId,ordered[0].id);assert.equal(ordered[2].fields!.projectId,ordered[0].id);assert.equal(ordered[2].fields!.sectionId,ordered[1].id);
+    const repeated=prepareDraft(db.snapshot(),staged.changes,[{action:'create',entity:'project',fields:{title:'School'}},{action:'create',entity:'section',fields:{title:'Homework',projectTitle:'School'}},{action:'create',entity:'task',fields:{title:'Math worksheet',sectionTitle:'Homework',dueDate:'2026-10-10'}}]);assert.equal(repeated.filter(c=>c.entity!=='category').length,3);db.preview(repeated,0);
   }finally{db.close();}
 });
 test('duplicate project names cannot resolve arbitrarily, and search ignores command words',()=>{

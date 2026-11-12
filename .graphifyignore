@@ -1,0 +1,34 @@
+# Generated output, installed dependencies, local data, and tooling are not app source.
+node_modules/
+dist/
+release/
+test-results/
+.git/
+.speech-env/
+.speech-build/
+speech-runtime/
+.graphify-env/
+.graphify/
+graphify-out/
+.codex/
+.agents/
+.claude/
+package-lock.json
+speech/requirements.lock.txt
+assets/third-party/
+.env
+.env.*
+*.sqlite*
+*.db*
+*.wav
+*.mp3
+*.pem
+*.key
+__pycache__/
+*.pyc
+# Agent/tooling instructions do not describe the shipped application.
+AGENTS.md
+CLAUDE.md
+GRAPHIFY_SETUP.md
+docs/GRAPHIFY.md
+docs/GRAPHIFY_VERIFICATION.md

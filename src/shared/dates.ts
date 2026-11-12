@@ -17,3 +17,8 @@ export function monthDates(year: number, month: number): string[] {
 }
 export function weekday(date: string): string { return new Intl.DateTimeFormat('en', { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)); }
 export function shortDate(date: string): string { return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)); }
+export function endOfWeek(today:string):string { return shiftDate(today,(7-new Date(`${today}T12:00:00Z`).getUTCDay())%7); }
+export function deadlineLabel(date:string,today:string,completed=false):string {
+  const days=daysBetween(today,date),label=completed?'':days===0?'Due today':days>0?`${days} ${days===1?'day':'days'} left`:`Overdue by ${-days} ${days===-1?'day':'days'}`;
+  return `${shortDate(date)} ${date.slice(0,4)}${label?` · ${label}`:''}`;
+}

@@ -41,7 +41,7 @@ test('preview is reversible, assigns stable IDs, stale requests fail and retries
     const staged=db.preview([{action:'create',entity:'task',fields:{title:'Packaging'}}],0);
     assert.equal(db.snapshot().tasks.length,0);assert.equal(db.snapshot().canUndo,false);
     const id='same-request';const receipt=apply(db,staged.changes,id);
-    assert.equal(db.snapshot().tasks[0].id,staged.changes[0].id);
+    assert.equal(db.snapshot().tasks[0].id,staged.changes.find(c=>c.entity==='task')!.id);
     const duplicate=db.mutate({changes:staged.changes,label:'Retry',expectedRevision:0,requestId:id});assert.deepEqual(duplicate,receipt);assert.equal(db.snapshot().tasks.length,1);
     assert.throws(()=>db.mutate({changes:[{action:'create',entity:'task',fields:{title:'Stale'}}],label:'Stale',expectedRevision:0,requestId:'new'}),/changed/);
     db.preferences({dayWidth:160});assert.equal(db.revision,1);

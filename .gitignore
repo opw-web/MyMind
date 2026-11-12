@@ -11,6 +11,7 @@ speech-runtime/
 !.env.example
 *.sqlite
 *.sqlite-*
+*.sqlite.*-backup
 *.db
 *.db-*
 *.wav
@@ -19,3 +20,16 @@ speech-runtime/
 *.key
 __pycache__/
 *.pyc
+
+# Local Graphify tooling and rebuild caches (keep the portable graph outputs).
+.graphify/env/
+.graphify/output/cache/
+.graphify/output/.graphify_*
+.graphify/output/.needs_update
+.graphify/runtime/
+.graphify/obsidian/.obsidian/workspace*.json
+
+# Graphify generates these for each checkout.
+/.graphify/obsidian/
+/.graphify/output/*
+!/.graphify/output/semantic.json

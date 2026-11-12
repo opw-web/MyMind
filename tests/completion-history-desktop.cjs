@@ -1,0 +1,31 @@
+const {_electron:electron}=require('playwright'),assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
+const {PlannerDatabase}=require('../dist/main/database'),{todayIn}=require('../dist/shared/dates');
+const root=path.resolve(__dirname,'..'),dataDir=path.join(root,'test-results',`completion-desktop-${Date.now()}`),db=new PlannerDatabase(path.join(dataDir,'planner.sqlite'),()=>new Date(Date.now()-25*3600000));
+const today=todayIn();
+db.mutate({changes:[{action:'create',entity:'task',id:'archived',fields:{title:'Archived research',completed:true,scheduledDate:today}},{action:'create',entity:'task',id:'boundary',fields:{title:'Boundary research',completed:true}},{action:'create',entity:'task',id:'active',fields:{title:'Active research'}},{action:'create',entity:'event',id:'meeting',fields:{title:'Standalone meeting',startDate:today}}],label:'Fixture',requestId:'fixture',expectedRevision:0});
+const boundary=db.snapshot().tasks.find(t=>t.id==='boundary');boundary.completedAt=new Date(Date.now()-24*3600000+7000).toISOString();db.db.prepare('UPDATE tasks SET body=? WHERE id=?').run(JSON.stringify(boundary),boundary.id);db.close();
+const env={...process.env,MYMIND_DATA_DIR:dataDir,MYMIND_SKIP_OLLAMA:'1',MYMIND_TEST_MODE:'1'};delete env.ELECTRON_RUN_AS_NODE;
+let app;const errors=[];
+async function launch(){app=await electron.launch({executablePath:process.env.MYMIND_TEST_EXECUTABLE||require('electron'),args:process.env.MYMIND_TEST_EXECUTABLE?[]:[root],env});const page=await app.firstWindow();page.on('pageerror',e=>errors.push(e.message));await page.getByTestId('calendar').waitFor();return page;}
+(async()=>{try{
+ let page=await launch();
+ await page.getByRole('button',{name:'Tasks view',exact:true}).click();
+ assert.equal(await page.locator('.task-row').count(),2);assert.equal(await page.locator('.task-row.is-completed').count(),1);
+ await page.waitForFunction(()=>document.querySelectorAll('.task-row').length===1,{},{timeout:12000});
+ await page.getByRole('button',{name:/^Archived /}).click();assert.equal(await page.locator('.task-row').count(),2);
+ assert.match(await page.locator('.task-row').first().innerText(),/Created:.*Completed:/s);
+ await page.getByRole('button',{name:'Edit task Archived research',exact:true}).click();assert.match(await page.locator('.task-timestamps').innerText(),/Created:.*Completed:/s);await page.getByRole('button',{name:'Close editor',exact:true}).click();
+ await page.getByRole('button',{name:'Reopen Boundary research',exact:true}).click();await page.getByRole('button',{name:/^All tasks /}).click();assert.equal(await page.locator('.task-row').count(),2);
+ await page.getByRole('button',{name:'Complete Active research',exact:true}).click();await page.getByRole('button',{name:'Reopen Active research',exact:true}).waitFor();assert.equal(await page.locator('.task-row.is-completed').count(),1);
+ await page.screenshot({path:path.join(root,'test-results','completion-tasks.png')});
+ await page.getByRole('button',{name:'Calendar view',exact:true}).click();
+ const calendarDay=page.locator(`[data-date="${today}"]`);assert.equal(await calendarDay.locator('.event-card.is-completed').count(),1);
+ await page.getByRole('button',{name:'Complete Standalone meeting in calendar',exact:true}).click();await page.getByRole('button',{name:'Reopen Standalone meeting in calendar',exact:true}).waitFor();assert.equal(await calendarDay.locator('.event-card.is-completed').count(),2);
+ await page.getByRole('button',{name:`Open day ${today}`,exact:true}).click();assert.equal(await page.locator('.detail-event.is-completed').count(),2);
+ await page.getByRole('button',{name:'Reopen Standalone meeting in agenda',exact:true}).click();await page.getByRole('button',{name:'Complete Standalone meeting in agenda',exact:true}).waitFor();await page.getByRole('button',{name:'Close agenda',exact:true}).click();
+ await calendarDay.locator('.event-card').filter({hasText:'Standalone meeting'}).locator('.event-content').click();await page.getByLabel('Done',{exact:true}).check();await page.getByRole('button',{name:'Save changes',exact:true}).click();await page.getByRole('button',{name:'Reopen Standalone meeting in calendar',exact:true}).waitFor();
+ await page.screenshot({path:path.join(root,'test-results','completion-calendar.png')});
+ await app.close();app=null;page=await launch();assert.equal(await page.locator(`[data-date="${today}"] .event-card.is-completed`).count(),2);
+ const state=await page.evaluate(()=>window.planner.snapshot());assert.equal(state.tasks.find(t=>t.id==='boundary').completedAt,null);assert.ok(state.tasks.find(t=>t.id==='active').completedAt);
+ assert.deepEqual(errors,[]);fs.writeFileSync(path.join(root,'test-results','completion-desktop-report.json'),JSON.stringify({passed:true,checks:['automatic archive boundary','timestamps','reopening','recent completion','calendar retention','agenda','event editor','restart'],errors},null,2));console.log('Completion desktop checks passed.');
+ }finally{if(app)await app.close();}})().catch(error=>{console.error(error);process.exitCode=1;});

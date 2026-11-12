@@ -1,0 +1,5 @@
+Kokoro-ONNX 0.6.1 (MIT): https://github.com/thewh1teagle/kokoro-onnx
+Kokoro-82M v1.0 (Apache-2.0): https://huggingface.co/hexgrad/Kokoro-82M
+Phonemizer 3.4.0 (GPL-3.0): https://github.com/bootphon/phonemizer/tree/v3.4.0
+eSpeak NG, bundled by espeakng-loader 0.2.4 (GPL-3.0): https://github.com/thewh1teagle/espeakng-loader and https://github.com/espeak-ng/espeak-ng
+Source packages: https://pypi.org/project/phonemizer/3.4.0/ and https://pypi.org/project/espeakng-loader/0.2.4/

@@ -1,34 +1,15 @@
-# Original product brief
+# Current product brief — Bloom
 
-The original request was a personal Windows app based on a useful Miro workflow: horizontal month rows, dates within them, crossed-out past days, sticky-note events, and a to-do list on the right. The image illustrated functionality; copying Miro's visual design was not required.
+MYMIND is a private Windows planner for personal/project tasks and a day/time calendar, with local Ollama assistance and reviewed local dictation. The current Bloom template is the design authority: pastel blocks, pixel flowers/cat, Nunito and Silkscreen. Historical Miro and V2 references explain provenance; their month-row layout, shared Date coupling and immediate AI saving do not describe current behavior.
 
-Manual controls and a small local Ollama model were both essential. The user already had `qwen3.5:4b` and wanted to tell it what needed doing, what had been done, and what should change. Actual application tools should make those changes. The other central requirement was complete shutdown: Start menu launch, a taskbar window, and Close terminating everything the app started, including Ollama.
+Tasks have optional independent deadlines, displayed as derived all-day Deadline markers. Each task can have many planned or actual sessions with independent dates, times and notes. A session can link to a checklist step. Standalone sessions have no completion checkbox. Activity reports do not imply completion. Completed tasks archive after 24 hours, while their calendar sessions remain; deleting tasks or steps detaches sessions.
 
-## Accepted version 1.0 direction
+Every AI action produces one pending preview, including corrections and conversational Undo. Clear work waits with unresolved required details until the whole batch is ready. Hover/focus reveals changes; Apply saves one atomic undoable batch and Dismiss saves nothing. Manual editing remains immediate except when editing proposed records or proposal-only references. Concurrent edits require refreshed review and explicit conflict choices.
 
-- Readable fixed-width day cells, scrolling and zoom; one row per month.
-- Independently designed dark interface with subdued month colors.
-- Notes, colors, optional times and inclusive multi-day events.
-- Projects/sections, task ordering, and Inbox for unassigned work.
-- Dated tasks displayed as synchronized calendar checkbox cards.
-- Clear AI requests apply immediately with Undo; ambiguity asks a question.
-- Typed chat initially, and a Start menu shortcut without sign-in autostart.
-- Local SQLite; Electron, React, TypeScript and Vite.
-- Native Ollama tool calling with validated drafts, atomic commits, bounded loops, cancellation, revision checks and request deduplication.
-- A dedicated owned Ollama process, private loopback port, shared downloaded model files and Windows Job Object cleanup.
-- Default 4,096-token context, with 2,048 fallback under GPU memory pressure.
-- Empty initial data; no screenshot import.
+Settings persists Light, Dark or live System appearance. Existing users start in Light. Dark uses warm charcoal while preserving the Bloom world. The model picker lists installed local Ollama library weights with verified completion and tool capabilities; it excludes hf.co, remote/cloud and unreadable metadata. qwen3.5:9b remains default. Invalid saved choices stay visible as unavailable with a route to choose an eligible model. Context settings report actual active context and larger windows consume more memory.
 
-## Acceptance criteria
+Recording → Stop → transcript review → Send. Unsent audio and transcript versions persist locally for recovery. Read AI replies aloud using a local voice. Off by default. Closing quits all owned local processes; minimizing keeps the planner running. Other Ollama instances stay separate.
 
-Manual changes must survive reopening. Task and calendar checkboxes must agree. Moving a multi-day event preserves its duration. Past dates cross out as days change. One Undo restores a whole assistant batch. Real-model tests must cover event creation/movement, combined completion and creation, and duplicate-name clarification.
+Acceptance requires exact no-write-before-Apply assertions, independent sessions/deadlines and completion, overnight/midnight/category reuse, stale/conflict handling, compact Light/Dark/System native interaction, reviewed dictation safety, real-model mixed tool proposals/corrections/Apply, restart persistence and fresh Graphify map/vault. Test data must be isolated from the owner's planner. No cloud inference, downloads, sync, recurrence, dashboard or weight training is introduced.
 
-The installed app runs without a development server. Repeated launches focus the existing window. Closing during loading/inference and forced main-process termination must remove owned workers and their ports and release GPU memory. Other Ollama instances remain separate. GPU residency is measured on the target PC.
-
-## Version 1.1 extension
-
-The user asked for a microphone next to Send, local Faster Whisper, visible capture/transcription, and a Clicky-like interactive flow. They also requested verified event/task creation and deletion, a prominent upper-left Undo button, and Ctrl+Z.
-
-Version 1.1 adds microphone PCM capture, a level meter, live drafts, final recognition, optional sending after a pause, cancellation, and a bundled CPU worker. The speech process follows the same shutdown rule. Real CRUD and voice-to-planner checks verify the operations.
-
-The requested public GitHub repository is **MyMind**. Its README captures both the original intent and the shipped capabilities. Private planner data, credentials, recordings, build environments and model caches are excluded.
+See [PRODUCT.md](../PRODUCT.md), [DESIGN.md](../DESIGN.md), [README.md](../README.md) and [VALIDATION.md](../VALIDATION.md) for current scope, operation and evidence. The [legacy screenshot](legacy/README.md) and [V1 README](legacy/V1_README.md) remain historical references.
