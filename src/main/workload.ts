@@ -120,5 +120,5 @@ export function workloadChanges(draft:Workload){
   const ids=new Map(draft.tasks.map(t=>[t.key,randomUUID()]));
   const changes:Change[]=draft.tasks.map(t=>({action:'create',entity:'task',id:ids.get(t.key),fields:{title:t.title,notes:t.notes,dueDate:t.dueDate,steps:t.steps.map(title=>({id:randomUUID(),title,completed:false})),dependsOnIds:[...new Set(t.dependsOnKeys.map(key=>ids.get(key)!))]}}));
   for(const t of draft.tasks)for(const session of t.sessions)changes.push({action:'create',entity:'event',id:randomUUID(),fields:{...session,endDate:session.endDate??session.startDate,title:t.title,kind:'planned',linkedTaskId:ids.get(t.key)}});
-  return {changes,questions:draft.unresolved.map(detail=>({question:detail.question,taskId:detail.taskKey?ids.get(detail.taskKey)!:null}))};
+  return {changes,questions:draft.unresolved.map(detail=>({question:detail.question,field:detail.field,taskId:detail.taskKey?ids.get(detail.taskKey)!:null}))};
 }

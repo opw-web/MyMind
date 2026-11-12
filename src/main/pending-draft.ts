@@ -6,10 +6,11 @@ import {prepareDraft} from './draft';
 import {eventIntervalMinutes} from '../shared/calendar';
 import {isDate} from '../shared/dates';
 import {changeSchema} from '../shared/validation';
+export const DELETION_SCOPE_FIELD='deletionScope';
 const identity={draftId:z.string().min(1),version:z.number().int().positive()};
 const applySchema=z.object({...identity,expectedRevision:z.number().int().nonnegative(),requestId:z.string().min(1).max(100)}).strict();
 const editSchema=z.object({...identity,expectedRevision:z.number().int().nonnegative(),changes:z.array(changeSchema).optional(),repreview:z.boolean().optional(),resolveIssueIds:z.array(z.string()).optional()}).strict();
-export interface RequestQuestion {requestId:string;request:string;entity:'event'|'task';subject:string[];fields:string[];}
+export interface RequestQuestion {requestId:string;request:string;entity:'event'|'task';targetId?:string;subject:string[];fields:string[];}
 interface ConflictRequirement {fields:string[];blocked:boolean;}
 interface State {questions:Map<string,RequestQuestion>;conflicts:Map<string,ConflictRequirement>;tombstones:Map<string,Change|undefined>;baseSnapshot:Snapshot;clock:Date;id:string;version:number;baseRevision:number;changes:Change[];compiled:CompiledBatch;undo?:UndoToken;restores:RestoreToken[];unresolved:DraftIssue[];timezone:string;}
 export interface DraftTurn {readonly jobId:string;readonly generation:number;readonly version:number;readonly revision:number;readonly draftId?:string;readonly requestId:string;}
@@ -37,7 +38,13 @@ export class PendingDraftService {
  referencedQuestions(text:string):string[] {
   if(/\b(?:another|different|separate|new)\b|^(?:how|why|what|when|where|if|imagine|suppose)\b|\b(?:don't|do not|never|what if)\b/i.test(text))return [];
   const words:string[]=text.toLowerCase().match(/[\p{L}\p{N}]+/gu)??[],matches:string[]=[];
-  for(const [id,context] of this.current?.questions??[])if(context.subject.every(word=>words.includes(word))&&words.some((word,index)=>['the','that','this'].includes(word)&&context.subject.includes(words[index+1])))matches.push(id);
+  for(const [id,context] of this.current?.questions??[]){
+    const qualified=words.some((word,index)=>['the','that','this'].includes(word)&&context.subject.includes(words[index+1]));
+    const namedSchedule=context.entity==='event'&&context.fields.some(field=>['startDate','startTime','endTime'].includes(field))&&
+      words[0]==='schedule'&&context.subject.every((word,index)=>words[index+1]===word)&&
+      ['on','for','at','from'].includes(words[context.subject.length+1]);
+    if(context.subject.length&&(qualified||namedSchedule)&&context.subject.every(word=>words.includes(word)))matches.push(id);
+  }
   return matches.length===1?matches:[];
  }
  private matches(turn:DraftTurn):void {
@@ -50,8 +57,9 @@ export class PendingDraftService {
   const baseline=undo||restores.length?this.db.previewBatch({expectedRevision:turn.revision,changes:[],undo,restores}).projectedSnapshot:this.db.snapshot();
   this.db.previewBatch({expectedRevision:turn.revision,changes:prepareDraft(baseline,old?.changes??[],local),undo,restores});return {changes:local};
  }
- stage(turn:DraftTurn,incoming:Change[],options:{answerQuestionIds?:string[];requestQuestions?:{issueId:string;context:RequestQuestion}[];resolveIssueIds?:Set<string>;unresolved?:DraftIssue[];undo?:UndoToken;restore?:RestoreToken;restoreId?:string;restoreEntity?:Change['entity']}={}):PendingDraft {
+ stage(turn:DraftTurn,source:Change[],options:{answerQuestionIds?:string[];requestQuestions?:{issueId:string;context:RequestQuestion}[];resolveIssueIds?:Set<string>;unresolved?:DraftIssue[];undo?:UndoToken;restore?:RestoreToken;restoreId?:string;restoreEntity?:Change['entity'];resolvedDeletionIssueId?:string}={}):PendingDraft {
   this.matches(turn);const old=this.current;
+  const incoming=source.map(change=>change.action==='create'&&!change.id?{...change,id:randomUUID()}:change);
   for(const change of incoming){
     if(change.entity==='task'&&change.fields&&'scheduledDate' in change.fields)throw new Error('Use explicit event sessions for calendar placement.');
     if(change.entity==='event'&&change.fields?.completed!==undefined){const existing=this.snapshot().events.find(event=>event.id===change.id);if(change.action==='create'||!existing?.linkedTaskId)throw new Error('Standalone events have no completion control.');}
@@ -64,14 +72,29 @@ export class PendingDraftService {
   const changes=prepareDraft(baseline,previous,incoming),clock=old?.clock??new Date(),compiled=this.db.previewBatch({expectedRevision:turn.revision,changes,undo,restores,clock});
   const questions=new Map(old?.questions??[]),answered=new Set<string>();
   for(const id of options.answerQuestionIds??[]){const context=questions.get(id);if(!context)continue;
-    const matches=incoming.filter(change=>change.action!=='delete'&&change.entity===context.entity&&change.id).map(change=>({change,target:compiled.projectedSnapshot[context.entity==='event'?'events':'tasks'].find(item=>item.id===change.id)})).filter(({target})=>target&&context.subject.every(word=>(target.title.toLowerCase().match(/[\p{L}\p{N}]+/gu)??[]).some(token=>token===word)));
-    const identities=new Set(matches.map(({change})=>change.id));if(identities.size!==1)continue;
-    const idTarget=matches[0].change.id!;
-    try{for(const field of context.fields)this.validateResolution({id,required:true,question:'Required request detail',entity:context.entity,targetId:idTarget,field},incoming,compiled.projectedSnapshot);answered.add(id);}catch{}
+    const key=context.entity==='event'?'events':'tasks',projected=compiled.projectedSnapshot[key];
+    const matches=incoming.filter(change=>change.action!=='delete'&&change.entity===context.entity&&change.id&&projected.some(item=>
+      item.id===change.id&&(context.targetId?item.id===context.targetId:context.subject.every(word=>item.title.toLowerCase().match(/[\p{L}\p{N}]+/gu)?.some(token=>token===word)))));
+    const identities=new Set(matches.map(change=>change.id));
+    const targetId=context.targetId??(identities.size===1?matches[0].id:undefined);
+    if(!targetId)continue;
+    if(!context.fields.length){
+      const previous=(old?.compiled.projectedSnapshot??baseline)[key].find(item=>item.id===targetId);
+      const current=projected.find(item=>item.id===targetId);
+      const changed=matches.some(change=>change.action==='create'||Object.keys(change.fields??{}).some(field=>JSON.stringify((previous as Record<string,unknown>|undefined)?.[field])!==JSON.stringify((current as Record<string,unknown>|undefined)?.[field])));
+      if(changed)answered.add(id);
+      continue;
+    }
+    try{for(const field of context.fields)this.validateResolution({id,required:true,question:'Required request detail',entity:context.entity,targetId,field},incoming,compiled.projectedSnapshot);answered.add(id);}catch{}
   }
   const conflicts=new Map(old?.conflicts??[]);
   for(const id of options.resolveIssueIds??[]){const issue=old?.unresolved.find(issue=>issue.id===id);if(!issue)throw new Error('That clarification no longer exists.');this.validateResolution(issue,incoming,compiled.projectedSnapshot,conflicts.get(id));}
-  const retained=(old?.unresolved??[]).filter(issue=>{if(options.resolveIssueIds?.has(issue.id)||answered.has(issue.id))return false;if(issue.field==='conflict')return true;try{this.validateResolution(issue,incoming,compiled.projectedSnapshot);return false;}catch{return true;}});
+  const retained=(old?.unresolved??[]).filter(issue=>{
+    if(issue.field===DELETION_SCOPE_FIELD)return issue.id!==options.resolvedDeletionIssueId||!incoming.some(change=>change.action==='delete');
+    if(options.resolveIssueIds?.has(issue.id)||answered.has(issue.id))return false;
+    if(issue.field==='conflict')return true;
+    try{this.validateResolution(issue,incoming,compiled.projectedSnapshot);return false;}catch{return true;}
+  });
   const unresolved=[...retained,...(options.unresolved??[])];
   for(const entry of options.requestQuestions??[]){const issue=unresolved.find(issue=>issue.id===entry.issueId);if(!issue)throw new Error('The required request question no longer exists.');issue.requestId=entry.context.requestId;questions.set(entry.issueId,structuredClone(entry.context));}
   for(const id of questions.keys())if(!unresolved.some(issue=>issue.id===id))questions.delete(id);
@@ -82,6 +105,18 @@ export class PendingDraftService {
  private validateResolution(issue:DraftIssue,changes:Change[],candidate:Snapshot,conflict?:ConflictRequirement):void {
   if(!issue.required)return;
   if(conflict?.blocked)throw new Error('This conflict cannot be resolved by editing fields. Dismiss the proposal and prepare a new request.');
+  if(issue.field==='sessions'&&issue.entity==='task'&&issue.targetId){
+    const previous=this.current?.compiled.projectedSnapshot.events??[];
+    const matches=changes.filter(change=>{
+      const date=change.fields?.startDate;
+      if(change.entity!=='event'||change.action==='delete'||typeof date!=='string'||!isDate(date))return false;
+      const event=candidate.events.find(event=>event.id===change.id);
+      return event?.kind==='planned'&&event.linkedTaskId===issue.targetId&&event.startDate===date
+        &&(change.action==='create'||previous.find(event=>event.id===change.id)?.startDate!==date);
+    });
+    if(matches.length!==1)throw new Error('Resolve the session question with a linked planned session and an explicitly chosen date.');
+    return;
+  }
   const patch=changes.find(change=>change.action!=='delete'&&change.id===issue.targetId&&(!issue.entity||change.entity===issue.entity));
   const fields=patch?.fields;
   if(!patch||!fields||!issue.targetId)throw new Error('Resolve this required issue with a matching target and field correction.');

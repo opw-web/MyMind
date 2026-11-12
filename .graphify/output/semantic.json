@@ -834,7 +834,7 @@
     },
     {
       "id": "readme_qwen",
-      "label": "Installed local completion-and-tools library models with qwen3.5:9b default",
+      "label": "Eligible installed Ollama models with qwen3.5:4b as the default",
       "file_type": "concept",
       "source_file": "README.md",
       "source_location": "Appearance and local model",
@@ -846,7 +846,7 @@
     },
     {
       "id": "readme_runtime_context",
-      "label": "Verified active context and conservative runtime sampling",
+      "label": "Requested 16K context and verified active runtime context",
       "file_type": "rationale",
       "source_file": "README.md",
       "source_location": "Appearance and local model",
@@ -855,7 +855,7 @@
       "author": null,
       "contributor": null,
       "_origin": "semantic",
-      "rationale": "Larger context uses memory; measured accuracy is required to change temperature 0.6/presence 0."
+      "rationale": "The default 4B planner uses a measured short sampling profile at requested 16K; Settings reports actual active context and memory cost."
     },
     {
       "id": "readme_dictation",
@@ -931,7 +931,7 @@
     },
     {
       "id": "readme_test_isolation",
-      "label": "Real paired model outcomes and isolated native Electron checks",
+      "label": "Repeated Qwen 4B gate verifies exact previews Apply and Undo in disposable databases",
       "file_type": "concept",
       "source_file": "README.md",
       "source_location": "Build and verify",
@@ -992,7 +992,7 @@
     },
     {
       "id": "docs_product_brief_settings",
-      "label": "Live appearance and eligible installed local model recovery",
+      "label": "Live appearance and eligible local Qwen 4B model recovery at requested 16K",
       "file_type": "concept",
       "source_file": "docs/PRODUCT_BRIEF.md",
       "source_location": null,
@@ -1025,6 +1025,32 @@
       "author": null,
       "contributor": null,
       "_origin": "semantic"
+    },
+    {
+      "id": "readme_delete_scope",
+      "label": "Explicit deletion honors final keep corrections and stored task links",
+      "file_type": "rationale",
+      "source_file": "README.md",
+      "source_location": "AI preview and deliberate saving",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic",
+      "rationale": "Resolve requested identities before proposing deletion, clarify ambiguous names, and include linked sessions only if requested."
+    },
+    {
+      "id": "docs_product_brief_delete_scope",
+      "label": "Explicit deletion honors final keep corrections and stored task links",
+      "file_type": "rationale",
+      "source_file": "docs/PRODUCT_BRIEF.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic",
+      "rationale": "Resolve requested identities before proposing deletion, clarify ambiguous names, and include linked sessions only if requested."
     },
     {
       "id": "validation_document",
@@ -1970,6 +1996,28 @@
       "_origin": "semantic"
     },
     {
+      "source": "readme_preview",
+      "target": "readme_delete_scope",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "AI preview and deliberate saving",
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "docs_product_brief_preview",
+      "target": "docs_product_brief_delete_scope",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/PRODUCT_BRIEF.md",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
       "source": "validation_document",
       "target": "validation_synthetic_verification",
       "relation": "references",
@@ -2017,12 +2065,12 @@
   "hyperedges": [],
   "source_hashes": {
     ".github/workflows/checks.yml": "6e5ef642d7aff3ac6c17a1e13cbd60ba3cff26212cb7e7dd0a6cc118e4c0e975",
-    "README.md": "fa02940dca9cb7da0dbab9de89ce053900d49e6683ee3413f77ac0d4e4dc43c2",
+    "README.md": "cb2a7f6a650c53f1f4dc3fbe3e5a61753aceb9becc53a397b6dec3e35a5d7a50",
     "THIRD_PARTY_NOTICES.md": "14d4a7b4613fe094570640fa75b2839022fcba7fe426b0da9428bc5caac98dda",
     "VALIDATION.md": "16dd4643aec3c811dcdae1113807559292aa73f4e173f6f5a98810dc81465305",
     "assets/icon.png": "43fa89f5307c75d9741d164dff73350be7f089a5998545643348b869662797b1",
     "assets/icon.svg": "8dc4f0ed394bf7af95670ae628fa87bf0befaee9b4bd913b6bb7837efd7026d7",
-    "docs/PRODUCT_BRIEF.md": "335a0ac29a92c4e99bc0bce6bb77e77eb885cbb5da11bced596efd590d0bc572",
+    "docs/PRODUCT_BRIEF.md": "9542788471db9e6a78d694a4ca15f78ef18889bce8e8aef81eac1a7991fef3ea",
     "docs/RELEASE_NOTES.md": "255e55af13c99ca9cd3179158dab2284efe4909001e5fbe06c4221699be9cf14",
     "docs/V2_PLAN.md": "45d1e09ad43ce83e61134314a1aab5a11a4230847c56865df4442efb724269ee",
     "docs/images/calendar.png": "ee9abda72751a640c4389bc85ec703a0b9362a6c45940d792c99c4f6281ec465",

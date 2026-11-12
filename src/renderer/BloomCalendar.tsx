@@ -50,7 +50,23 @@ const BloomCalendar=forwardRef<CalendarHandle,Props>(function BloomCalendar({sna
  const minutesAt=(y:number,column:HTMLElement)=>snap((y-column.getBoundingClientRect().top)/MIN_PX);
  useEffect(()=>{const move=(e:MouseEvent)=>{const s=selecting.current,r=resizing.current;if(s){const at=minutesAt(e.clientY,s.column);setGhost({date:s.date,from:Math.min(s.origin,at),to:Math.max(s.origin,at)});}if(r){const at=minutesAt(e.clientY,r.column);setGhost({date:r.date,from:r.event.startDate===r.date?minutes(r.event.startTime!):0,to:at});}};const up=(e:MouseEvent)=>{const s=selecting.current,r=resizing.current;selecting.current=null;resizing.current=null;setGhost(null);if(s&&Math.abs(e.clientY-s.y)>=6){const at=minutesAt(e.clientY,s.column),from=Math.min(s.origin,at),to=Math.max(s.origin,at,from+15);onNew(shiftDate(s.date,Math.floor(from/1440)),clock(from),clock(to),shiftDate(s.date,Math.floor(to/1440)));}if(r){const fields=calendarResize(r.date,minutesAt(e.clientY,r.column));const duration=daysBetween(r.event.startDate,fields.endDate)*1440+minutes(fields.endTime)-minutes(r.event.startTime!);if(duration>0)onMove(r.event,fields);}};window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);return()=>{window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up);};},[onNew,onMove]);
  function drag(e:DragEvent,event:CalendarEntry,anchor:string){e.dataTransfer.setData('application/mymind',JSON.stringify({entity:'event',id:event.id,entryType:event.entryType,anchor}));e.dataTransfer.effectAllowed='move';}
- function drop(e:DragEvent,date:string,timed=false){e.preventDefault();try{const data=JSON.parse(e.dataTransfer.getData('application/mymind'));const entry=allEntries.find(i=>i.id===data.id&&i.entryType===(data.entryType??'session'));if(!entry)return;const targetDate=shiftDate(entry.startDate,daysBetween(data.anchor??entry.startDate,date));if(entry.entryType==='deadline')onMove(entry,{startDate:targetDate});else if(timed){const at=Math.min(1425,minutesAt(e.clientY,e.currentTarget as HTMLElement));onMove(entry,moveEventTo(entry,targetDate,clock(at)));}else onMove(entry,moveEventTo(entry,targetDate));}catch{}}
+ function drop(e:DragEvent,date:string,timed=false){
+  e.preventDefault();
+  try{
+   const data=JSON.parse(e.dataTransfer.getData('application/mymind'));
+   const entry=allEntries.find(i=>i.id===data.id&&i.entryType===(data.entryType??'session'));
+   if(!entry)return;
+   const anchor=data.anchor??entry.startDate;
+   const targetDate=shiftDate(entry.startDate,daysBetween(anchor,date));
+   if(entry.entryType==='deadline'){onMove(entry,{startDate:targetDate});return;}
+   if(!timed){onMove(entry,moveEventTo(entry,targetDate));return;}
+   const at=Math.min(1425,minutesAt(e.clientY,e.currentTarget as HTMLElement));
+   if(!entry.startTime||anchor===entry.startDate){onMove(entry,moveEventTo(entry,targetDate,clock(at)));return;}
+   // A timed continuation starts at midnight on its rendered day.
+   const moved=minutes(entry.startTime)+at;
+   onMove(entry,moveEventTo(entry,shiftDate(targetDate,Math.floor(moved/1440)),clock(moved%1440)));
+  }catch{}
+ }
  const card=(event:CalendarEntry,date:string,style?:React.CSSProperties,original=false)=>{
  const proposed=!!changed(event),removed=changed(event)?.action==='delete',task=snapshot.tasks.find(t=>t.id===event.linkedTaskId),timed=!!style;
  return <div key={(original?'original:':'')+entryKey(event)} className={`${timed?'event-block':'all-day-chip'} event-card color-${event.color} ${timed&&Number(style?.height)<47?'event-compact':''} ${event.kind==='actual'?'actual-entry':''} ${event.completed?'is-completed':''} ${original?'preview-original':proposed?'preview-proposed':''} ${selected===entryKey(event)?'preview-selected':''}`} style={style} data-event-id={event.id} data-entry-type={event.entryType} data-linked-task={event.linkedTaskId??undefined} data-start-date={event.startDate} data-end-date={event.endDate} draggable={!original&&!busy} onDragStart={e=>drag(e,event,date)} {...(!original?eventProps(event):{})}>

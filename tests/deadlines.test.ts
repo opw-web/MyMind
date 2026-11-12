@@ -7,7 +7,18 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {PlannerDatabase} from '../src/main/database';
 import {deadlineLabel,endOfWeek,todayIn} from '../src/shared/dates';
-import {simpleCreation,simpleCreate} from '../src/main/simple-request';
+import type {Change} from '../src/shared/model';
+import {groundExplicitTaskDeadlines,simpleCreation,simpleCreate} from '../src/main/simple-request';
+
+test('an explicit deadline adjacent to a new task survives omitted model fields without moving its session',()=>{
+  const task:Change={action:'create',entity:'task',id:'proposal',fields:{title:'Prepare proposal'}};
+  const session:Change={action:'create',entity:'event',fields:{title:'Draft session',linkedTaskId:'proposal',startDate:'2026-11-07'}};
+  groundExplicitTaskDeadlines('Create a task called Prepare proposal due 2026-11-10. Also create Draft session on 2026-11-07.',[task,session]);
+  assert.equal(task.fields?.dueDate,'2026-11-10');
+  assert.equal(session.fields?.startDate,'2026-11-07');
+  groundExplicitTaskDeadlines('Create a task called Prepare proposal due 2026-11-11, actually I changed my mind.',[task]);
+  assert.equal(task.fields?.dueDate,'2026-11-10');
+});
 import {authorizedActions} from '../src/main/capabilities';
 import {PlannerAssistant} from '../src/main/assistant';
 test('Deadline and legacy placement are independent and undoable',()=>{

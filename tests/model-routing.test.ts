@@ -5,6 +5,29 @@ import {authorizedActions} from '../src/main/capabilities';
 import {PlannerDatabase} from '../src/main/database';
 import {PlannerAssistant} from '../src/main/assistant';
 
+test('Qwen 4B gets the named record from a large planner without sending unrelated record details',async()=>{
+ const db=new PlannerDatabase(':memory:');
+ const tasks=Array.from({length:24},(_,index)=>({action:'create' as const,entity:'task' as const,id:`routine-${index}`,fields:{title:`Routine item ${index}`}}));
+ db.mutate({changes:[...tasks,{action:'create',entity:'task',id:'needle',fields:{title:'Renew passport'}}],label:'Fixture',requestId:'large-catalog',expectedRevision:0});
+ const runtime={model:'qwen3.5:4b',status:{state:'ready',context:16384},call:async(_endpoint:string,body:any)=>{
+  const system=body.messages[0].content as string;
+  const sample=/Known planner records [^\n]+?: (\[.*\])\.\n/.exec(system);
+  assert.ok(sample);
+  const records=JSON.parse(sample[1]);
+  assert.ok(records.some((record:{id:string})=>record.id==='needle'));
+  assert.ok(records.length<=8);
+  assert.equal(body.think,false);
+  assert.equal(body.options.temperature,0.2);
+  assert.equal(body.options.num_predict,2048);
+  return {message:{content:'Renew passport is in your planner.'}};
+ }};
+ try{
+  const assistant=new PlannerAssistant(db,runtime as any,()=>{});
+  await assistant.chat({text:'What is the status of Renew passport?',requestId:'query-passport'});
+  assert.equal(db.revision,1);
+ }finally{db.close();}
+});
+
 test('explicit recording authorizes factual activities beside a negative task clause, while questions and negation remain read-only',()=>{
  assert.ok(authorizedActions('Record both as separate actual Sleep activities. Do not add tasks or planned sessions.').has('create'));
  for(const text of ['Do not record actual Sleep activities','What if I record actual Sleep activities?','Should I record actual Sleep activities?','Imagine I record actual Sleep activities','"Record actual Sleep activities"'])assert.equal(authorizedActions(text).has('create'),false,text);

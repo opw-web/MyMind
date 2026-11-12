@@ -3,6 +3,15 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {OllamaRuntime} from '../src/main/ollama';
 
+test('fresh settings use the installed Qwen 4B profile with a 16K context',()=>{
+  const runtime=new OllamaRuntime(()=>{});
+  try{
+    assert.equal(runtime.model,process.env.MYMIND_MODEL||'qwen3.5:4b');
+    assert.equal(runtime.modelOptions.num_ctx,16384);
+    assert.equal(runtime.status.context,16384);
+  }finally{runtime.stop();}
+});
+
 test('Ollama streams reasoning internally while retaining complete tool calls and exposing only answer text',async()=>{
   let request:any;
   const server=createServer((req,res)=>{let body='';req.on('data',chunk=>body+=chunk);req.on('end',()=>{request=JSON.parse(body);res.writeHead(200,{'content-type':'application/x-ndjson'});for(const item of [{message:{role:'assistant',thinking:'Internal reasoning fragment.'}},{message:{role:'assistant',content:'A concise answer.'}},{message:{role:'assistant',tool_calls:[{function:{name:'stage_tasks',arguments:{tasks:[]}}}]}},{done:true,eval_count:12}])res.write(JSON.stringify(item)+'\n');res.end();});});

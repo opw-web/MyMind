@@ -20,13 +20,15 @@ Press **Apply** to save the entire validated batch once. **Dismiss** saves nothi
 
 The assistant never uses conversational text as proof of saving: saved receipts come from successful Apply. Questions and hypotheticals remain read-only. New chat clears transient conversation, selections and the pending proposal. There is no conversation archive, embedding store or learned-preference memory.
 
+For explicit deletion, the planner resolves the named tasks and events before preparing the preview. Corrections such as “actually, keep New Age” take precedence. If you ask to remove a task and its associated events, only sessions linked to that task are included. An ambiguous name needs clarification before any deletion is proposed.
+
 ## Appearance and local model
 
 Settings offers **Light**, **Dark** and **System**. Light preserves the approved Bloom template and is the default for existing users. Dark uses warm charcoal and readable pastels. System follows the operating-system preference live, including native controls. Reduced motion is respected throughout.
 
 The model picker lists only installed local Ollama library weights with verified completion and tool support. hf.co, remote/cloud and unreadable/ineligible models are hidden; no model is removed or downloaded by MYMIND. An unavailable saved model is explained and Settings remains available to choose an eligible replacement. MYMIND never silently switches models.
 
-The default remains **qwen3.5:9b**, with a requested **65,536-token context**. Settings can select a supported context size and reports the verified active context used by the assistant's budget. Larger windows use more memory. Runtime sampling is temperature 0.6/presence penalty 0; schema extraction uses temperature 0. Sampling is runtime configuration, not weight training. See verification evidence for paired sampling experiments and hardware-dependent timing.
+The default is **qwen3.5:4b**, with a requested **16,384-token context**. Its regular planner turns use temperature 0.2, thinking off and a 2,048-token output cap. Settings can select other eligible models and reports the verified active context used by the assistant's budget. Larger windows use more memory. See the verification record for the Qwen 4B sampling comparison.
 
 ## Local voice
 
@@ -44,7 +46,7 @@ Close the app before copying the entire data directory for a manual backup; keep
 
 ## Build and verify
 
-Development needs Windows x64, Node 22.13+ and an existing [Ollama installation](https://ollama.com/download/windows) with eligible local weights. Default qwen3.5:9b must already be installed. Python 3.12 and the pinned speech build environment are needed only when rebuilding bundled speech assets.
+Development needs Windows x64, Node 22.13+ and an existing [Ollama installation](https://ollama.com/download/windows) with eligible local weights. Install qwen3.5:4b in Ollama before using the default. Python 3.12 and the pinned speech build environment are needed only when rebuilding bundled speech assets.
 
 ```powershell
 npm ci
@@ -57,12 +59,12 @@ node tests/preview-review-desktop.cjs
 node tests/appearance-desktop.cjs
 node tests/deadline-desktop.cjs
 node tests/text-box-desktop.cjs
-npm run test:model
-npm run test:model:benchmark
+npm run test:qwen4 -- --release-gate --profile=baseline
+npm run test:qwen4 -- --release-gate --profile=short
 npm run graphify:build
 npm run graphify:check
 ```
 
-Model acceptance uses real qwen3.5:9b, isolated SQLite files, exact mixed task/session and overnight/category outcomes, corrections and explicit Apply. The benchmark repeats identical fixtures at temperature 0.6 and 0.2 with presence penalty 0, recording model, actual context, calls, timings and saved outcomes. Keep the current default unless measured accuracy improves without critical regressions. No new model downloads occur. Native tests use isolated data and deterministic Ollama/ASR boundaries where stated; they do not claim actual speech inference.
+The Qwen 4B release gate repeats the verbatim deletion five times and each independent workflow three times. It uses real inference where the workflow needs it and checks exact outcomes, zero writes before Apply, and Undo restoration in isolated databases. Both profiles use the same fixtures and report the installed model digest, active context, tool calls and timings. The older `test:model` commands remain the historical 9B comparison. Native tests use isolated data and deterministic Ollama or speech boundaries where stated.
 
 To rebuild speech, create `.speech-env`, install `speech/requirements.lock.txt`, then `npm run build:speech`. Packaging commands are `npm run package` or `npm run package:msi`. No installer/deployment is implied by passing development checks. Historical [V1](docs/legacy/V1_README.md) and [V2](docs/V2_PLAN.md) documents retain earlier product history.

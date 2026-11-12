@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 
-import {Category,Change,ChatMessage,Color,DraftItem,DraftIssue,EventItem,PendingDraft,Receipt,RuntimeStatus,Selection,Snapshot,Task} from '../shared/model';
+import {Category,Change,ChatMessage,Color,DEFAULT_ASSISTANT_CONTEXT,DraftItem,DraftIssue,EventItem,PendingDraft,Receipt,RuntimeStatus,Selection,Snapshot,Task} from '../shared/model';
 
 import {shortDate,todayIn,weekday} from '../shared/dates';
 
@@ -44,7 +44,7 @@ export default function Workspace(){
 
   const [busy,setBusy]=useState(false),[toast,setToast]=useState<{text:string;error?:boolean}|null>(null);
 
-  const [settingsBusy,setSettingsBusy]=useState(false),[models,setModels]=useState<string[]>([]),[selectedModel,setSelectedModel]=useState(''),[contextTokens,setContextTokens]=useState(65536),[activeContext,setActiveContext]=useState<number|null>(null),[settingsError,setSettingsError]=useState('');
+  const [settingsBusy,setSettingsBusy]=useState(false),[models,setModels]=useState<string[]>([]),[selectedModel,setSelectedModel]=useState(''),[contextTokens,setContextTokens]=useState(DEFAULT_ASSISTANT_CONTEXT),[activeContext,setActiveContext]=useState<number|null>(null),[settingsError,setSettingsError]=useState('');
   const loadSettings=async()=>{setSettingsBusy(true);setSettingsError('');try{const value=await window.planner.runtimeSettings();setModels(value.models);setSelectedModel(value.model);setContextTokens(value.context);setActiveContext(value.activeContext);}catch(e){setSettingsError(clean(e));}finally{setSettingsBusy(false);}};
   const applySettings=async()=>{setSettingsBusy(true);setSettingsError('');setActiveContext(null);try{await window.planner.configureRuntime({model:selectedModel,context:contextTokens});await loadSettings();}catch(e){setSettingsError(clean(e));}finally{setSettingsBusy(false);}};
   const [taskLayout,setTaskLayout]=useState<'checklist'|'flow'>('checklist');

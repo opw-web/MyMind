@@ -19,7 +19,7 @@ export function inferCategory(title:string,entity:'task'|'event'):string {
   if(/\b(prototype|cornhole|3d print|packaging|build|design)\b/i.test(title))return 'Projects';
   return entity==='task'?'Tasks':'Events';
 }
-const semanticColors:Record<string,Color>={Sleep:'lavender',Exams:'rose',Assignments:'sky',Submissions:'amber',Meetings:'lavender',Appointments:'coral',Errands:'sage',Projects:'lavender',Tasks:'sage',Events:'sky'};
+const semanticColors:Record<string,Color>={Sleep:'lavender',Exams:'rose',Assignments:'sky',Submissions:'amber',Meetings:'lavender',Appointments:'coral',Errands:'sage',Projects:'lavender',Tasks:'sage',Events:'sky',Work:'sky',Study:'lavender',Travel:'amber','Get ready':'sage','Get ready and travel':'sage',Exercise:'coral',Walk:'sage',Run:'coral'};
 
 // Shared by manual editing, assistant drafts and the explicit bulk organizer.
 export function categorizeChanges(snapshot:Snapshot,source:Change[]):Change[]{

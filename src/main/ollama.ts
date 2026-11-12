@@ -3,13 +3,13 @@ import { join, delimiter } from 'node:path';
 import { createServer } from 'node:net';
 import {execFile} from 'node:child_process';
 import { WindowsJob } from './windows-job';
-import { RuntimeStatus } from '../shared/model';
+import { DEFAULT_ASSISTANT_CONTEXT, DEFAULT_ASSISTANT_MODEL, RuntimeStatus } from '../shared/model';
 
 export class OllamaRuntime {
-  model = process.env.MYMIND_MODEL || 'qwen3.5:9b';
+  model = process.env.MYMIND_MODEL || DEFAULT_ASSISTANT_MODEL;
   // Use the same runner options for preload and every chat request.
-  readonly modelOptions:{num_ctx:number;num_gpu?:number} = {num_ctx:65536};
-  status: RuntimeStatus = { state: 'starting', message: 'Starting your local assistant…', model: this.model, context: 65536, gpu: 'unknown' };
+  readonly modelOptions:{num_ctx:number;num_gpu?:number} = {num_ctx:DEFAULT_ASSISTANT_CONTEXT};
+  status: RuntimeStatus = { state: 'starting', message: 'Starting your local assistant…', model: this.model, context: DEFAULT_ASSISTANT_CONTEXT, gpu: 'unknown' };
   private job?: WindowsJob;
   private controller = new AbortController();
   private initializing?: Promise<void>;

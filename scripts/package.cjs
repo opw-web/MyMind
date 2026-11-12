@@ -22,4 +22,13 @@ WineVmManager.prototype.execWine=async function(input){
   }
 };
 const target=process.argv[2]==='msi'?'msi':'nsis';
-build({targets:Platform.WINDOWS.createTarget(target,Arch.x64)}).catch(error=>{console.error(error);process.exit(1);});
+build({
+  targets:Platform.WINDOWS.createTarget(target,Arch.x64),
+  config:{
+    afterPack({appOutDir}){
+      // Check the packaged path directly so the workspace copy cannot hide a missing binary.
+      const nativeModule=path.resolve(appOutDir,'resources/app/node_modules/@koromix/koffi-win32-x64');
+      require(nativeModule);
+    }
+  }
+}).catch(error=>{console.error(error);process.exit(1);});

@@ -1,6 +1,6 @@
 {
   "name": "mymind",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "A private Bloom calendar and task planner with local AI previews",
   "author": "MYMIND",
   "license": "UNLICENSED",
@@ -21,6 +21,7 @@
     "test": "tsx --test tests/*.test.ts",
     "test:desktop": "node tests/bloom-desktop.cjs",
     "test:model": "node tests/model-acceptance.cjs",
+    "test:qwen4": "node tests/qwen4-acceptance.cjs",
     "test:model:benchmark": "node tests/model-acceptance.cjs --benchmark",
     "test:appearance": "node tests/appearance-desktop.cjs",
     "test:lifecycle": "node tests/lifecycle.cjs",
@@ -77,6 +78,10 @@
       {
         "from": "assets/third-party",
         "to": "licenses"
+      },
+      {
+        "from": "node_modules/@koromix/koffi-win32-x64",
+        "to": "app/node_modules/@koromix/koffi-win32-x64"
       }
     ],
     "win": {

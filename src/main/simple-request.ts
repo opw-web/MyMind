@@ -31,3 +31,16 @@ export function simpleCreate(text:string,today:string):Change|undefined{
   const result=simpleCreation(text,today);
   return result&&'change'in result?result.change:undefined;
 }
+
+/** Use a literal date adjacent to a named new task, even if inference omitted it. */
+export function groundExplicitTaskDeadlines(text:string,changes:Change[]):void{
+  if(/\b(?:actually|instead|correction|changed my mind)\b/i.test(text))return;
+  for(const change of changes){
+    if(change.action!=='create'||change.entity!=='task'||typeof change.fields?.title!=='string')continue;
+    const name=change.fields.title.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    if(!name)continue;
+    const literal=new RegExp(`(?:\\b(?:called|named|titled)\\s+|[:;]\\s*|\\band\\s+)["“]?${name}["”]?\\s*,?\\s+(?:due(?: on)?|deadline(?: is)?)\\s+(\\d{4}-\\d{2}-\\d{2})(?![\\d-])`,'gi');
+    const dates=new Set([...text.matchAll(literal)].map(match=>match[1]).filter(isDate));
+    if(dates.size===1)change.fields.dueDate=dates.values().next().value;
+  }
+}

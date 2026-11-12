@@ -2,6 +2,24 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {PlannerDatabase} from '../src/main/database';
 import {activityReport} from '../src/main/activity';
+
+test('explicit multi-day actual intervals compile together without a model or duplicate records',()=>{
+ const db=new PlannerDatabase(':memory:');
+ const request='On 2026-11-03 I slept from 11 PM to 6 AM, and on 2026-11-04 I slept from 11 PM to 6 AM. Record both as separate actual Sleep activities in the same Sleep category, each ending the following morning. Do not add tasks or planned sessions.';
+ try{
+  const report=activityReport(request,'2026-11-06',db.snapshot());
+  assert.ok(report&&!report.mixed&&!report.question);
+  assert.deepEqual(report.changes.map(({fields})=>[fields?.kind,fields?.startDate,fields?.endDate,fields?.startTime,fields?.endTime]),[
+   ['actual','2026-11-03','2026-11-04','23:00','06:00'],
+   ['actual','2026-11-04','2026-11-05','23:00','06:00'],
+  ]);
+  db.mutate({changes:report.changes,label:'Log nights',expectedRevision:0,requestId:'nights'});
+  assert.equal(db.snapshot().categories.length,1);
+  assert.equal(activityReport(request,'2026-11-06',db.snapshot())?.duplicate,true);
+  const mixed=request.replace('Do not add tasks or planned sessions.','Add a task called Pack.');
+  assert.equal(activityReport(mixed,'2026-11-06',db.snapshot())?.mixed,true);
+ }finally{db.close();}
+});
 test('sleep duration from last night and morning travel use exact local intervals; ambiguous/hypothetical/quoted reports never execute',()=>{
  const db=new PlannerDatabase(':memory:');try{const state=db.snapshot();const overnight=activityReport('I slept eight hours from 11 PM last night','2026-11-05',state)!;assert.deepEqual(Object.fromEntries(Object.entries(overnight.changes[0].fields!).filter(([key])=>['startDate','endDate','startTime','endTime','kind'].includes(key))),{kind:'actual',startDate:'2026-11-04',endDate:'2026-11-05',startTime:'23:00',endTime:'07:00'});
  const travel=activityReport('From 6 AM to 8 AM got ready and traveled','2026-11-05',state)!;assert.equal(travel.changes[0].fields?.title,'Get ready and travel');assert.equal(travel.changes[0].fields?.startTime,'06:00');assert.equal(travel.changes[0].fields?.endTime,'08:00');
