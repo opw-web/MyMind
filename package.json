@@ -5,7 +5,6 @@
   "author": "MYMIND",
   "license": "UNLICENSED",
   "private": true,
-  "main": "dist/main/index.js",
   "scripts": {
     "graphify": "node .graphify/run.cjs",
     "graphify:build": "node .graphify/run.cjs build",
@@ -15,33 +14,13 @@
     "graphify:watch:start": "powershell -NoProfile -File .graphify/start-watch.ps1",
     "graphify:watch:stop": "powershell -NoProfile -File .graphify/stop-watch.ps1",
     "graphify:hooks": "powershell -NoProfile -File .graphify/install-hooks.ps1",
-    "build": "tsc -p tsconfig.main.json && vite build",
-    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.json --noEmit",
-    "start": "npm run build && electron .",
-    "test": "tsx --test tests/*.test.ts",
-    "test:desktop": "node tests/bloom-desktop.cjs",
-    "test:model": "node tests/model-acceptance.cjs",
-    "test:qwen4": "node tests/qwen4-acceptance.cjs",
-    "test:model:benchmark": "node tests/model-acceptance.cjs --benchmark",
-    "test:appearance": "node tests/appearance-desktop.cjs",
-    "test:lifecycle": "node tests/lifecycle.cjs",
-    "icon": "node scripts/icon.cjs",
+    "build": "vite build --mode tauri",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "build:speech": ".speech-env\\Scripts\\python.exe scripts/build-speech.py",
-    "package": "npm run build && node scripts/package.cjs",
-    "package:msi": "npm run build && node scripts/package.cjs msi",
-    "test:task-structure": "node tests/task-structure-desktop.cjs",
-    "test:dictated-workload": "node tests/dictated-workload-model.cjs",
-    "test:flow": "node tests/task-flow-desktop.cjs",
-    "test:conversation": "node tests/reasoning-conversation-model.cjs",
-    "test:calendar-model": "node tests/calendar-linked-model.cjs",
-    "test:calendar-desktop": "node tests/calendar-linked-desktop.cjs",
-    "test:packaged-conversation": "node tests/reasoning-conversation-desktop.cjs",
-    "test:command": "node tests/bloom-desktop.cjs",
     "build:tauri": "vite build --mode tauri",
     "tauri": "tauri"
   },
   "dependencies": {
-    "koffi": "3.3.2",
     "zod": "^4.1.0"
   },
   "devDependencies": {
@@ -51,70 +30,12 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "latest",
-    "electron": "44.7.0",
-    "electron-builder": "26.15.3",
     "playwright": "latest",
-    "png-to-ico": "latest",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sharp": "latest",
     "tsx": "latest",
     "typescript": "latest",
     "vite": "latest"
-  },
-  "build": {
-    "appId": "com.mymind.planner",
-    "productName": "MYMIND",
-    "directories": {
-      "output": "release",
-      "buildResources": "assets"
-    },
-    "files": [
-      "dist/**/*",
-      "assets/icon.ico",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "speech-runtime",
-        "to": "speech"
-      },
-      {
-        "from": "assets/third-party",
-        "to": "licenses"
-      },
-      {
-        "from": "node_modules/@koromix/koffi-win32-x64",
-        "to": "app/node_modules/@koromix/koffi-win32-x64"
-      }
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico",
-      "signAndEditExecutable": false
-    },
-    "msi": {
-      "oneClick": false,
-      "perMachine": false,
-      "createDesktopShortcut": false,
-      "createStartMenuShortcut": true,
-      "runAfterFinish": false,
-      "shortcutName": "MYMIND",
-      "additionalLightArgs": [
-        "-sval"
-      ],
-      "artifactName": "MYMIND-Setup-${version}.msi"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": false,
-      "createStartMenuShortcut": true,
-      "shortcutName": "MYMIND",
-      "deleteAppDataOnUninstall": false,
-      "artifactName": "MYMIND-Setup-${version}.exe"
-    },
-    "asar": false
   }
 }
