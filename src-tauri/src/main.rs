@@ -9,25 +9,26 @@ mod media_permission {
     use tauri::WebviewWindow;
     use webview2_com::Microsoft::Web::WebView2::Win32::{
         ICoreWebView2, ICoreWebView2PermissionRequestedEventArgs,
-        ICoreWebView2PermissionRequestedEventHandler, COREWEBVIEW2_PERMISSION_KIND_MICROPHONE,
-        COREWEBVIEW2_PERMISSION_STATE_ALLOW,
+        ICoreWebView2PermissionRequestedEventHandler,
+        ICoreWebView2PermissionRequestedEventHandler_Impl, COREWEBVIEW2_PERMISSION_KIND,
+        COREWEBVIEW2_PERMISSION_KIND_MICROPHONE, COREWEBVIEW2_PERMISSION_STATE_ALLOW,
     };
-    use windows::core::implement;
+    use windows_core::{implement, Ref};
 
     #[implement(ICoreWebView2PermissionRequestedEventHandler)]
     struct GrantMicrophone;
 
-    impl ICoreWebView2PermissionRequestedEventHandler_Impl for GrantMicrophone {
+    impl ICoreWebView2PermissionRequestedEventHandler_Impl for GrantMicrophone_Impl {
         fn Invoke(
             &self,
-            _sender: Option<&ICoreWebView2>,
-            args: Option<&ICoreWebView2PermissionRequestedEventArgs>,
-        ) -> windows::core::Result<()> {
-            if let Some(args) = args {
-                let kind = unsafe { args.PermissionKind() }?;
-                if kind == COREWEBVIEW2_PERMISSION_KIND_MICROPHONE {
-                    unsafe { args.SetState(COREWEBVIEW2_PERMISSION_STATE_ALLOW) }?;
-                }
+            _sender: Ref<ICoreWebView2>,
+            args: Ref<ICoreWebView2PermissionRequestedEventArgs>,
+        ) -> windows_core::Result<()> {
+            let args = args.ok()?;
+            let mut kind = COREWEBVIEW2_PERMISSION_KIND::default();
+            unsafe { args.PermissionKind(&mut kind) }?;
+            if kind == COREWEBVIEW2_PERMISSION_KIND_MICROPHONE {
+                unsafe { args.SetState(COREWEBVIEW2_PERMISSION_STATE_ALLOW) }?;
             }
             Ok(())
         }
@@ -35,11 +36,12 @@ mod media_permission {
 
     pub fn install(window: &WebviewWindow) {
         let _ = window.with_webview(|webview| {
-            let core = webview.controller().CoreWebView2()?;
+            let Ok(core) = (unsafe { webview.controller().CoreWebView2() }) else {
+                return;
+            };
             let handler: ICoreWebView2PermissionRequestedEventHandler = GrantMicrophone.into();
             let mut token: i64 = 0;
-            unsafe { core.add_PermissionRequested(&handler, &mut token) }?;
-            Ok::<_, windows::core::Error>(())
+            let _ = unsafe { core.add_PermissionRequested(&handler, &mut token) };
         });
     }
 }

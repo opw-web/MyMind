@@ -18,6 +18,12 @@ jobs:
       - name: Core tests
         working-directory: src-tauri/core
         run: cargo test
+      # The bundled speech runtime is built locally (npm run build:speech) and
+      # gitignored; a placeholder satisfies tauri-build's resource validation
+      # for the debug binary used by the probe below.
+      - name: Placeholder speech resources
+        shell: pwsh
+        run: New-Item -ItemType Directory -Path speech-runtime | Out-Null
       - name: Desktop build
         working-directory: src-tauri
         run: cargo build
