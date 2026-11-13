@@ -146,6 +146,20 @@ struct SpeakInput {
     text: String,
 }
 
+/// WebView2 ignores WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS once wry sets its
+/// own arguments, so tests and debugging opt into extra switches explicitly.
+#[cfg(windows)]
+fn extra_browser_args() -> Option<String> {
+    let extra = std::env::var("MYMIND_BROWSER_ARGS").ok()?;
+    let extra = extra.trim();
+    if extra.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection {extra}"
+    ))
+}
+
 fn emit(window: &WebviewWindow, event: &str, payload: Value) {
     let _ = window.emit_to("main", event, payload);
 }
@@ -690,6 +704,10 @@ fn main() {
                         || (url.scheme() == "https" && url.host_str() == Some("tauri.localhost"))
                 })
                 .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny);
+            #[cfg(windows)]
+            if let Some(args) = extra_browser_args() {
+                builder = builder.additional_browser_args(&args);
+            }
             if let Some(theme) = match appearance.as_deref() {
                 Some("dark") => Some(tauri::Theme::Dark),
                 Some("light") => Some(tauri::Theme::Light),

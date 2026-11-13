@@ -33,18 +33,26 @@ jobs:
           $env:MYMIND_DATA_DIR = Join-Path $env:TEMP "mymind-mic-probe-$([guid]::NewGuid())"
           $env:MYMIND_SKIP_OLLAMA = '1'
           $env:MYMIND_TEST_MODE = '1'
-          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222 --use-fake-device-for-media-stream --use-fake-ui-for-media-stream'
-          $app = Start-Process -PassThru -FilePath "src-tauri\target\debug\MYMIND.exe"
+          $env:MYMIND_BROWSER_ARGS = '--remote-debugging-port=9222 --use-fake-device-for-media-stream --use-fake-ui-for-media-stream'
+          $out = Join-Path $env:TEMP 'mymind-probe.out.log'
+          $err = Join-Path $env:TEMP 'mymind-probe.err.log'
+          $app = Start-Process -PassThru -FilePath "src-tauri\target\debug\MYMIND.exe" -RedirectStandardOutput $out -RedirectStandardError $err
           try {
             $ready = $false
-            for ($i = 0; $i -lt 100; $i++) {
+            for ($i = 0; $i -lt 60; $i++) {
+              if ($app.HasExited) { break }
               try {
                 Invoke-RestMethod -Uri 'http://127.0.0.1:9222/json/version' -TimeoutSec 2 | Out-Null
                 $ready = $true
                 break
-              } catch { Start-Sleep -Milliseconds 300 }
+              } catch { Start-Sleep -Milliseconds 500 }
             }
-            if (-not $ready) { throw 'desktop app did not open its CDP endpoint' }
+            if (-not $ready) {
+              "exit code: $($app.ExitCode)"
+              if (Test-Path $out) { Get-Content $out -Tail 40 }
+              if (Test-Path $err) { Get-Content $err -Tail 40 }
+              throw 'desktop app did not open its CDP endpoint'
+            }
             node scripts/mic-check.cjs
           } finally {
             Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
