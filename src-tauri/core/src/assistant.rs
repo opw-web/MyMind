@@ -1,19 +1,18 @@
-//! Local planner assistant. Write intents produce a server-owned draft.
+//! Local planner assistant. Model-intent turns produce a server-owned draft;
+//! every user-facing word comes from the model, never from built-in replies.
+mod ai;
 mod intent;
 mod model;
 mod temporal;
 
 use crate::{
-    deletion::{self, Context, Plan, Target, normalize, rx},
+    deletion::{Target, targets},
     model_runtime::ModelRuntime,
-    pending_draft::{
-        DELETION_SCOPE, Issue, PendingDraftService, Stage, Turn, record, revision, timezone, uid,
-    },
+    pending_draft::{PendingDraftService, Stage, Turn, revision, timezone},
     schema::{Entity, length, validate_request_id},
 };
-use anyhow::{Result, anyhow, ensure};
+use anyhow::{Result, anyhow, bail, ensure};
 use chrono::Utc;
-use intent::{Simple, creation_answer, existing_session, read, simple_creation, simple_edit};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
@@ -70,10 +69,17 @@ impl Selection {
     }
 }
 
+struct Completed {
+    request_id: String,
+    user: String,
+    content: String,
+    result: Value,
+}
+
 #[derive(Default)]
 struct Conversation {
     generation: u64,
-    completed: VecDeque<(String, Value)>,
+    completed: VecDeque<Completed>,
     references: Vec<Target>,
 }
 
@@ -184,12 +190,12 @@ impl PlannerAssistant {
                 .memory
                 .lock()
                 .map_err(|_| anyhow!("Assistant state unavailable."))?;
-            if let Some((_, result)) = memory
+            if let Some(completed) = memory
                 .completed
                 .iter()
-                .find(|(id, _)| id == &input.request_id)
+                .find(|completed| completed.request_id == input.request_id)
             {
-                return Ok(result.clone());
+                return Ok(completed.result.clone());
             }
             (
                 memory.generation,
@@ -211,9 +217,17 @@ impl PlannerAssistant {
         if let Some(references) = next_references {
             memory.references = references;
         }
-        memory
-            .completed
-            .push_back((input.request_id, result.clone()));
+        memory.completed.push_back(Completed {
+            request_id: input.request_id,
+            user: input.text.trim().chars().take(600).collect(),
+            content: result["content"]
+                .as_str()
+                .unwrap_or_default()
+                .chars()
+                .take(2000)
+                .collect(),
+            result: result.clone(),
+        });
         if memory.completed.len() > 128 {
             memory.completed.pop_front();
         }
@@ -224,7 +238,7 @@ impl PlannerAssistant {
         &self,
         input: &ChatInput,
         turn: &Turn<'_>,
-        refs: &[Target],
+        _refs: &[Target],
         model: Option<&str>,
         model_context: u64,
         token: &CancellationToken,
@@ -240,223 +254,88 @@ impl PlannerAssistant {
             .parse::<chrono_tz::Tz>()
             .unwrap_or(chrono_tz::UTC);
         let today = (self.now)().with_timezone(&zone).date_naive();
-        let items = deletion::targets(snapshot);
+        let items = targets(snapshot);
         let selected = input
             .selection
             .as_ref()
             .and_then(|selection| selection.resolve(turn, &items));
-        let selection_unavailable = input.selection.is_some() && selected.is_none();
         if let Some(id) = &input.clarification_issue_id {
             ensure!(
                 turn.issues.iter().any(|issue| issue.id() == id),
                 "That request clarification is no longer pending."
             );
         }
-        if deletion::explicit(text) {
-            let context = Context {
-                snapshot,
-                items: &items,
-                today,
-                selected,
-                references: refs,
-                selection_unavailable,
-            };
-            let mut resolve_deletion = false;
-            let issue = turn
-                .issues
+        let Some(model) = model else {
+            bail!("The assistant model is not ready. Start Ollama or pick a model in Settings.");
+        };
+        let deleted = self.drafts.deleted_targets()?;
+        let history: Vec<(String, String)> = {
+            let memory = self
+                .memory
+                .lock()
+                .map_err(|_| anyhow!("Assistant state unavailable."))?;
+            memory
+                .completed
                 .iter()
-                .find(|issue| issue.field == DELETION_SCOPE);
-            let mut plan = deletion::plan(text, &context, None);
-            if plan.is_err()
-                && let Some(model) = model
-            {
-                if let Some(confirmed) =
-                    model::resolve_deletion(text, &context, model, model_context, token, &infer)
-                        .await?
-                {
-                    plan = Ok(confirmed);
-                }
-            }
-            if let Some(issue) = issue
-                && plan.is_ok()
-            {
-                if deletion::replacement(text) {
-                    resolve_deletion = true;
-                } else if let Some(selected) = selected
-                    && deletion::selected_pointer(text)
-                    && let Some(source) = &issue.source
-                    && let Ok(clarified) = deletion::plan(source, &context, None)
-                    && clarified.companions.is_empty()
-                    && clarified.changes.iter().any(|c| {
-                        c.entity == selected.entity && c.id.as_deref() == Some(&selected.id)
-                    })
-                {
-                    plan = Ok(clarified);
-                    resolve_deletion = true;
-                }
-            }
-            match plan {
-                Ok(Plan {
-                    mut changes,
-                    companions,
-                    explain,
-                }) => {
-                    for clause in companions {
-                        if let Some(Simple::Changes(mut create)) = simple_creation(&clause, today) {
-                            changes.append(&mut create);
-                        } else {
-                            return self.block_deletion(turn, text, "I need more specific details for the accompanying changes. Please restate the complete request.", token);
-                        }
-                    }
-                    if changes.is_empty() {
-                        return Ok((
-                            reply("I’ll keep those planner items. No changes saved."),
-                            None,
-                        ));
-                    }
-                    let referenced = changes
-                        .iter()
-                        .filter_map(|change| {
-                            items
-                                .iter()
-                                .find(|item| {
-                                    item.entity == change.entity
-                                        && change.id.as_deref() == Some(&item.id)
-                                })
-                                .cloned()
-                        })
-                        .collect();
-                    let draft = self.publish(
-                        turn,
-                        Stage {
-                            changes,
-                            resolve_deletion,
-                            ..Stage::default()
-                        },
-                        token,
-                    )?;
-                    let message = if explain {
-                        "Review the exact items below. Removing a task leaves its calendar sessions independent unless you also asked to remove them. Apply to save."
-                    } else {
-                        "Review the proposed changes and Apply to save."
-                    };
-                    return Ok((preview(draft, message), Some(referenced)));
-                }
-                Err(error) => return self.block_deletion(turn, text, &error.to_string(), token),
-            }
-        }
-
-        if rx!(r"(?i)^(?:please\s+)?undo(?: (?:that|the last change|the last batch|my last change))?[.!]?$").is_match(text) {
-            return match self.publish(turn, Stage { undo: true, ..Stage::default() }, token) {
-                Ok(draft) => Ok((preview(draft, "Review the proposed Undo and Apply to save."), None)),
-                Err(error) if !token.is_cancelled() => Ok((reply(format!("{error} No changes saved.")), None)),
-                Err(error) => Err(error),
-            };
-        }
-        if let Some(c) =
-            rx!(r"(?i)^(?:please\s+)?(?:restore|bring back)\s+(.+?)[.!]?$").captures(text)
-        {
-            let name = normalize(&c[1]);
-            let targets = self
-                .drafts
-                .deleted_targets()?
+                .rev()
+                .take(10)
+                .map(|completed| (completed.user.clone(), completed.content.clone()))
+                .collect::<Vec<_>>()
                 .into_iter()
-                .filter(|(entity, id, title)| {
-                    record(snapshot, *entity, id).is_none()
-                        && (name == normalize(title)
-                            || matches!(name.as_str(), "it" | "that" | "that task" | "that event")
-                                && refs.iter().any(|r| r.entity == *entity && r.id == *id))
-                })
-                .collect::<Vec<_>>();
-            if let [(entity, id, _)] = targets.as_slice() {
+                .rev()
+                .collect()
+        };
+        let outcome = ai::decide(
+            text,
+            snapshot,
+            &items,
+            selected,
+            &deleted,
+            today,
+            &history,
+            model,
+            model_context,
+            token,
+            &infer,
+        )
+        .await?;
+        match outcome {
+            ai::Outcome::Message(message) => Ok((message_result(message), None)),
+            ai::Outcome::Undo { message } => {
                 let draft = self.publish(
                     turn,
                     Stage {
-                        restore: Some((*entity, id.clone())),
+                        undo: true,
                         ..Stage::default()
                     },
                     token,
                 )?;
-                return Ok((
-                    preview(draft, "Review the proposed restoration and Apply to save."),
-                    None,
-                ));
+                Ok((preview_result(draft, &message), None))
             }
-            return Ok((
-                reply("Which removed planner item should I restore? No changes saved."),
-                None,
-            ));
-        }
-
-        if let Some((reply, references)) =
-            read(text, snapshot, &items, today, turn.current.is_some())
-        {
-            return Ok((reply, Some(references)));
-        }
-        if let Some(changes) = creation_answer(input, turn, today) {
-            let draft = self.publish(
-                turn,
-                Stage {
-                    changes,
-                    ..Stage::default()
-                },
-                token,
-            )?;
-            return Ok((
-                preview(draft, "Review the proposed event and Apply to save."),
-                None,
-            ));
-        }
-        if let Some(changes) = intent::linked_creation(text) {
-            let draft = self.publish(
-                turn,
-                Stage {
-                    changes,
-                    ..Stage::default()
-                },
-                token,
-            )?;
-            return Ok((
-                preview(
-                    draft,
-                    "Review the task and linked sessions, then Apply to save.",
-                ),
-                None,
-            ));
-        }
-        if let Some(work) = intent::existing_work(text, &items, selected, today) {
-            return match work {
-                Ok(changes) => {
-                    let draft = self.publish(
-                        turn,
-                        Stage {
-                            changes,
-                            ..Stage::default()
-                        },
-                        token,
-                    )?;
-                    Ok((
-                        preview(draft, "Review the proposed changes and Apply to save."),
-                        None,
-                    ))
-                }
-                Err(question) => Ok((reply(question), None)),
-            };
-        }
-        match simple_creation(text, today) {
-            Some(Simple::Changes(changes)) => {
-                let changes = if rx!(
-                    r"(?i)^(?:(?:please|also)\s+)*(?:(?:can|could|would) you\s+)?schedule\b"
-                )
-                .is_match(text)
-                {
-                    match existing_session(changes, &items, selected) {
-                        Ok(changes) => changes,
-                        Err(question) => return Ok((reply(question), None)),
-                    }
-                } else {
-                    changes
-                };
+            ai::Outcome::Restore { entity, id, message } => {
+                let draft = self.publish(
+                    turn,
+                    Stage {
+                        restore: Some((entity, id)),
+                        ..Stage::default()
+                    },
+                    token,
+                )?;
+                Ok((preview_result(draft, &message), None))
+            }
+            ai::Outcome::Changes { changes, message } => {
+                let referenced = changes
+                    .iter()
+                    .filter_map(|change| {
+                        items
+                            .iter()
+                            .find(|item| {
+                                item.entity == change.entity
+                                    && change.id.as_deref() == Some(&item.id)
+                            })
+                            .cloned()
+                    })
+                    .collect::<Vec<_>>();
                 let draft = self.publish(
                     turn,
                     Stage {
@@ -465,160 +344,21 @@ impl PlannerAssistant {
                     },
                     token,
                 )?;
-                return Ok((
-                    preview(draft, "Review the proposed changes and Apply to save."),
-                    None,
-                ));
+                Ok((preview_result(draft, &message), Some(referenced)))
             }
-            Some(Simple::MissingDate(title)) => return self.missing_event(turn, title, token),
-            None => {}
         }
-        if let Some(c) = rx!(r"(?i)^(?:please\s+)?(?:add|create|schedule)\s+(?:a |an |the )?(?:planned )?(?:calendar )?event\s+(?:called|named|titled)\s+(.+?)[,.;]\s*(?:but\s+)?i (?:have not|haven['’]t) (?:picked|decided|chosen)\b.*\bdate\b").captures(text) {
-            return self.missing_event(turn, c[1].trim_matches([' ', '"', '“', '”']).to_owned(), token);
-        }
-        if let Some(changes) = intent::actual_activity(text, snapshot) {
-            if changes.is_empty() {
-                return Ok((reply("Those activities are already recorded."), None));
-            }
-            let draft = self.publish(
-                turn,
-                Stage {
-                    changes,
-                    ..Stage::default()
-                },
-                token,
-            )?;
-            return Ok((
-                preview(draft, "Review the recorded activities and Apply to save."),
-                None,
-            ));
-        }
-        if let Some(changes) = simple_edit(text, snapshot, &items, selected, today) {
-            let draft = self.publish(
-                turn,
-                Stage {
-                    changes,
-                    ..Stage::default()
-                },
-                token,
-            )?;
-            return Ok((
-                preview(draft, "Review the proposed changes and Apply to save."),
-                None,
-            ));
-        }
-        let (allow_create, allow_update) = model::authorized(text);
-        if !allow_create && !allow_update {
-            return Ok((
-                reply("Tell me what you’d like to add, change, or look up in your planner."),
-                None,
-            ));
-        }
-        if let Some(model) = model
-            && let Some(changes) = model::structured(
-                text,
-                &items,
-                snapshot,
-                selected,
-                today,
-                model,
-                model_context,
-                token,
-                &infer,
-            )
-            .await?
-        {
-            return match self.publish(
-                turn,
-                Stage {
-                    changes,
-                    ..Stage::default()
-                },
-                token,
-            ) {
-                Ok(draft) => Ok((
-                    preview(draft, "Review the proposed changes and Apply to save."),
-                    None,
-                )),
-                Err(_) if !token.is_cancelled() => Ok((
-                    reply(
-                        "I couldn't prepare the full proposal. Please restate the items and dates. No changes saved.",
-                    ),
-                    None,
-                )),
-                Err(error) => Err(error),
-            };
-        }
-        Ok((
-            reply(
-                "Could you give me the exact planner item and details you want to change? No changes saved.",
-            ),
-            None,
-        ))
     }
 
     fn publish(&self, turn: &Turn<'_>, stage: Stage, token: &CancellationToken) -> Result<Value> {
         ensure!(!token.is_cancelled(), "Request stopped. No changes saved.");
         self.drafts.stage(turn, stage)
     }
-
-    fn block_deletion(
-        &self,
-        turn: &Turn<'_>,
-        text: &str,
-        question: &str,
-        token: &CancellationToken,
-    ) -> Result<(Value, Option<Vec<Target>>)> {
-        if turn.current.is_some() && !turn.issues.iter().any(|i| i.field == DELETION_SCOPE) {
-            let question = format!(
-                "{question} Select the matching card and repeat the deletion, or start a replacement with “Instead, delete…”."
-            );
-            self.publish(
-                turn,
-                Stage {
-                    issue: Some(Issue::new(
-                        DELETION_SCOPE,
-                        question,
-                        Some(text.into()),
-                        None,
-                    )),
-                    ..Stage::default()
-                },
-                token,
-            )?;
-        }
-        Ok((reply(format!("{question} No changes saved.")), None))
-    }
-
-    fn missing_event(
-        &self,
-        turn: &Turn<'_>,
-        title: String,
-        token: &CancellationToken,
-    ) -> Result<(Value, Option<Vec<Target>>)> {
-        let message = format!("What date should I use for “{title}”?");
-        let issue = Issue::new(
-            "startDate",
-            message.clone(),
-            Some(title),
-            Some((Entity::Event, uid())),
-        );
-        let draft = self.publish(
-            turn,
-            Stage {
-                issue: Some(issue),
-                ..Stage::default()
-            },
-            token,
-        )?;
-        Ok((preview(draft, &message), None))
-    }
 }
 
-fn reply(content: impl Into<String>) -> Value {
-    json!({"content":content.into(),"contextTrimmed":false})
+fn message_result(content: String) -> Value {
+    json!({"content":content,"contextTrimmed":false})
 }
 
-fn preview(draft: Value, content: &str) -> Value {
+fn preview_result(draft: Value, content: &str) -> Value {
     json!({"content":content,"contextTrimmed":false,"preview":{"saved":false,"draft":draft}})
 }

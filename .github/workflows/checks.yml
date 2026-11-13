@@ -11,7 +11,35 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+      - run: npm run build:tauri
+      - name: Core tests
+        working-directory: src-tauri/core
+        run: cargo test
+      - name: Desktop build
+        working-directory: src-tauri
+        run: cargo build
+      - name: Microphone permission probe
+        shell: pwsh
+        run: |
+          $env:MYMIND_DATA_DIR = Join-Path $env:TEMP "mymind-mic-probe-$([guid]::NewGuid())"
+          $env:MYMIND_SKIP_OLLAMA = '1'
+          $env:MYMIND_TEST_MODE = '1'
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222 --use-fake-device-for-media-stream --use-fake-ui-for-media-stream'
+          $app = Start-Process -PassThru -FilePath "src-tauri\target\debug\MYMIND.exe"
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 100; $i++) {
+              try {
+                Invoke-RestMethod -Uri 'http://127.0.0.1:9222/json/version' -TimeoutSec 2 | Out-Null
+                $ready = $true
+                break
+              } catch { Start-Sleep -Milliseconds 300 }
+            }
+            if (-not $ready) { throw 'desktop app did not open its CDP endpoint' }
+            node scripts/mic-check.cjs
+          } finally {
+            Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+          }

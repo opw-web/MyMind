@@ -1,3 +1,4 @@
+use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use mymind_core::{assistant::PlannerAssistant, database::PlannerDatabase};
 use serde_json::{Value, json};
@@ -20,16 +21,24 @@ fn task(title: &str, source: &str, id: &str) -> Value {
     json!({"action":"create","entity":"task","id":id,"source":source,"fields":{"title":title}})
 }
 
-fn event(title: &str, source: &str, date: &str, task_id: &str) -> Value {
+fn event(title: &str, source: &str, date: &str, task_id: Value) -> Value {
     json!({"action":"create","entity":"event","source":source,
-        "fields":{"title":title,"startDate":date,"linkedTaskId":task_id}})
+        "fields":{"title":title,"startDate":date,"endDate":date,"linkedTaskId":task_id}})
 }
 
-async fn with_proposals(
+fn decision(changes: &[Value]) -> String {
+    json!({"kind":"changes","message":"Here is the proposal to review.","changes":changes}).to_string()
+}
+
+fn reply(message: &str) -> String {
+    json!({"kind":"reply","message":message}).to_string()
+}
+
+async fn attempt(
     service: &PlannerAssistant,
     request: Value,
     proposals: &[&str],
-) -> (Value, usize) {
+) -> (Result<Value>, usize) {
     let calls = Cell::new(0);
     let result = service
         .run_with(
@@ -45,13 +54,8 @@ async fn with_proposals(
                 ))
             },
         )
-        .await
-        .unwrap();
+        .await;
     (result, calls.get())
-}
-
-fn proposal(changes: &[Value]) -> String {
-    json!({"changes":changes}).to_string()
 }
 
 fn snapshot(response: &Value) -> &Value {
@@ -105,13 +109,15 @@ fn assert_session(
 async fn spoken_task_for_today_previews_one_linked_all_day_session() {
     let (db, service) = fixture();
     let text = "Create a task for today, All day, 3D printing, The walls game.";
-    let plan = proposal(&[task("3D printing The walls game", text, "t")]);
-    let (result, _) = with_proposals(
+    let plan = decision(&[task("3D printing The walls game", text, "t")]);
+    let (result, calls) = attempt(
         &service,
         json!({"text":text,"requestId":"spoken"}),
         &[&plan],
     )
     .await;
+    assert_eq!(calls, 1, "{result:?}");
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"].as_array().unwrap().len(), 1);
     assert_eq!(projected["events"].as_array().unwrap().len(), 1);
@@ -129,17 +135,18 @@ async fn spoken_task_for_today_previews_one_linked_all_day_session() {
 async fn conversational_calendar_and_task_request_accepts_a_grounded_pair() {
     let (_, service) = fixture();
     let text = "Okay, I want an event for today. The task and event for today, all day is for me to 3D print the walls game. So add that to my calendar and task.";
-    let plan = proposal(&[
+    let plan = decision(&[
         task("3D print the walls game", text, "t"),
-        event("3D print the walls game", text, "2026-11-10", "t"),
+        event("3D print the walls game", text, "2026-11-10", json!("t")),
     ]);
-    let (result, calls) = with_proposals(
+    let (result, calls) = attempt(
         &service,
         json!({"text":text,"requestId":"paired"}),
         &[&plan],
     )
     .await;
     assert_eq!(calls, 1);
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"].as_array().unwrap().len(), 1);
     assert_eq!(projected["events"].as_array().unwrap().len(), 1);
@@ -220,14 +227,14 @@ async fn task_dates_distinguish_work_days_from_deadlines() {
         ),
     ] {
         let (_, service) = fixture();
-        let result = service
-            .run(
-                json!({"text":text,"requestId":"temporal"}),
-                None,
-                &CancellationToken::new(),
-            )
-            .await
-            .unwrap();
+        let plan = decision(&[task(title, text, "t")]);
+        let (result, _) = attempt(
+            &service,
+            json!({"text":text,"requestId":"temporal"}),
+            &[&plan],
+        )
+        .await;
+        let result = result.unwrap_or_else(|error| panic!("{text}: {error}"));
         let projected = snapshot(&result);
         assert_eq!(projected["tasks"].as_array().unwrap().len(), 1, "{text}");
         assert_eq!(projected["tasks"][0]["title"], title, "{text}");
@@ -246,17 +253,18 @@ async fn structured_task_proposals_use_each_commitments_own_temporal_evidence() 
     let first = "Add a task called File receipts today";
     let second = "and a separate task called Mend coat tomorrow at 3 pm";
     let text = format!("{first} {second}");
-    let plan = proposal(&[
+    let plan = decision(&[
         task("File receipts", first, "one"),
         task("Mend coat", second, "two"),
     ]);
-    let (result, calls) = with_proposals(
+    let (result, calls) = attempt(
         &service,
         json!({"text":text,"requestId":"multiple"}),
         &[&plan],
     )
     .await;
     assert_eq!(calls, 1);
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"].as_array().unwrap().len(), 2);
     assert_eq!(projected["events"].as_array().unwrap().len(), 2);
@@ -273,58 +281,52 @@ async fn unsafe_or_incomplete_pairs_never_stage_partial_changes() {
     let file = task("File receipts", first, "one");
     let mend = task("Mend coat", second, "two");
     for (text, plan) in [
-        (multi.as_str(), proposal(&[file.clone()])),
+        (multi.as_str(), decision(&[file.clone()])),
         (
             multi.as_str(),
-            proposal(&[file.clone(), task("Mend coat", &multi, "two")]),
+            decision(&[file.clone(), task("Mend coat", &multi, "two")]),
         ),
         (
             multi.as_str(),
-            proposal(&[
+            decision(&[
                 file.clone(),
                 mend.clone(),
-                event("Mend coat", &multi, "2026-11-10", "one"),
+                event("Mend coat", &multi, "2026-11-10", json!("one")),
             ]),
         ),
         (
             paired,
-            proposal(&[event("File receipts", paired, "2026-11-10", "one")]),
+            decision(&[event("File receipts", paired, "2026-11-10", json!("one"))]),
         ),
         (
             paired,
-            proposal(&[
+            decision(&[
                 task("File receipts", paired, "one"),
-                event("File receipts", paired, "2026-11-10", "unknown"),
+                event("File receipts", paired, "2026-11-10", json!("unknown")),
             ]),
         ),
         (
             paired,
-            proposal(&[
+            decision(&[
                 task("Take passport", paired, "one"),
-                event("Take passport", paired, "2026-11-10", "one"),
+                event("Take passport", paired, "2026-11-10", json!("one")),
             ]),
         ),
     ] {
         let (db, service) = fixture();
-        let (result, calls) = with_proposals(
+        let (result, calls) = attempt(
             &service,
             json!({"text":text,"requestId":"unsafe"}),
             &[&plan],
         )
         .await;
-        assert_eq!(calls, 2, "{text}: only one repair may run");
-        assert!(result["preview"].is_null(), "{text} {plan}: {result}");
+        assert_eq!(calls, 2, "{text}: exactly one repair may run");
+        assert!(result.is_err(), "{text} {plan}: {result:?}");
         assert!(
             service.drafts().get_draft().unwrap().is_none(),
             "{text} {plan}"
         );
         assert_eq!(db.lock().unwrap().revision().unwrap(), 0);
-        assert!(
-            !result["content"]
-                .as_str()
-                .unwrap()
-                .contains("Unknown linked record")
-        );
     }
 }
 
@@ -332,37 +334,19 @@ async fn unsafe_or_incomplete_pairs_never_stage_partial_changes() {
 async fn malformed_model_output_can_be_repaired_once_without_writing() {
     let (db, service) = fixture();
     let text = "Create a task and calendar event for File receipts today";
-    let plan = proposal(&[
+    let plan = decision(&[
         task("File receipts", text, "t"),
-        event("File receipts", text, "2026-11-10", "t"),
+        event("File receipts", text, "2026-11-10", json!("t")),
     ]);
-    let (result, calls) = with_proposals(
+    let (result, calls) = attempt(
         &service,
         json!({"text":text,"requestId":"repair"}),
         &["{malformed", &plan],
     )
     .await;
     assert_eq!(calls, 2);
-    assert_session(snapshot(&result), "File receipts", None, "2026-11-10", None);
+    assert_session(snapshot(&result.unwrap()), "File receipts", None, "2026-11-10", None);
     assert_eq!(db.lock().unwrap().revision().unwrap(), 0);
-}
-
-#[tokio::test]
-async fn unresolved_or_negated_commitments_do_not_stage() {
-    for text in [
-        "Work on it today at 3 pm. It’s due Friday.",
-        "What if I need to 3D print the walls game tomorrow?",
-        "Create a task called File receipts today, but do not add a task.",
-        "Create a task called File receipts today if possible.",
-    ] {
-        let (_, service) = fixture();
-        let plan = proposal(&[task("File receipts", text, "t")]);
-        let (result, calls) =
-            with_proposals(&service, json!({"text":text,"requestId":"guard"}), &[&plan]).await;
-        assert_eq!(calls, 0, "{text}");
-        assert!(result["preview"].is_null(), "{text}: {result}");
-        assert!(service.drafts().get_draft().unwrap().is_none(), "{text}");
-    }
 }
 
 #[tokio::test]
@@ -372,17 +356,22 @@ async fn selected_task_can_receive_a_work_session_and_a_separate_deadline() {
         "changes":[{"action":"create","entity":"task","id":"coat","fields":{"title":"Mend coat"}}],
         "label":"Fixture","expectedRevision":0,"requestId":"seed"
     })).unwrap();
-    let result = service
-        .run(
-            json!({
-                "text":"Work on it today at 3 pm. It’s due Friday.","requestId":"selected",
-                "selection":{"entity":"task","id":"coat","revision":1}
-            }),
-            None,
-            &CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+    let text = "Work on it today at 3 pm. It’s due Friday.";
+    let plan = decision(&[
+        json!({"action":"update","entity":"task","id":"coat","source":text,"fields":{"dueDate":"2026-11-13"}}),
+        json!({"action":"create","entity":"event","source":text,
+            "fields":{"title":"Mend coat","startDate":"2026-11-10","endDate":"2026-11-10","startTime":"15:00","linkedTaskId":"coat"}}),
+    ]);
+    let (result, _) = attempt(
+        &service,
+        json!({
+            "text":text,"requestId":"selected",
+            "selection":{"entity":"task","id":"coat","revision":1}
+        }),
+        &[&plan],
+    )
+    .await;
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"].as_array().unwrap().len(), 1);
     assert_eq!(projected["tasks"][0]["id"], "coat");
@@ -393,12 +382,21 @@ async fn selected_task_can_receive_a_work_session_and_a_separate_deadline() {
         "2026-11-10",
         Some("15:00"),
     );
+    assert_eq!(db.lock().unwrap().revision().unwrap(), 1);
 }
 
 #[tokio::test]
 async fn event_only_request_does_not_create_a_task() {
     let (_, service) = fixture();
-    let result = service.run(json!({"text":"I need to make a calendar event called Dentist tomorrow","requestId":"event"}), None, &CancellationToken::new()).await.unwrap();
+    let text = "I need to make a calendar event called Dentist tomorrow";
+    let plan = decision(&[event("Dentist", text, "2026-11-11", Value::Null)]);
+    let (result, _) = attempt(
+        &service,
+        json!({"text":text,"requestId":"event"}),
+        &[&plan],
+    )
+    .await;
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"], json!([]));
     assert_eq!(projected["events"].as_array().unwrap().len(), 1);
@@ -410,18 +408,19 @@ async fn event_only_request_does_not_create_a_task() {
 async fn exact_pair_can_be_constructed_from_one_grounded_task() {
     let (_, service) = fixture();
     let text = "Okay, I want an event for today. The task and event for today, all day is for me to 3D print the walls game. So add that to my calendar and task.";
-    let plan = proposal(&[task(
+    let plan = decision(&[task(
         "3D print the walls game",
         "The task and event for today, all day is for me to 3D print the walls game.",
         "t",
     )]);
-    let (result, calls) = with_proposals(
+    let (result, calls) = attempt(
         &service,
         json!({"text":text,"requestId":"pair-host"}),
         &[&plan],
     )
     .await;
     assert_eq!(calls, 1);
+    let result = result.unwrap();
     assert_session(
         snapshot(&result),
         "3D print the walls game",
@@ -438,22 +437,23 @@ async fn date_prefixed_task_neither_lends_its_date_nor_disappears() {
     let text = format!("{first}. {second}.");
     let repair = task("Repair the bike", first, "bike");
     for (plan, complete) in [
-        (proposal(&[repair.clone()]), false),
+        (decision(&[repair.clone()]), false),
         (
-            proposal(&[repair, task("Call the clinic", second, "clinic")]),
+            decision(&[repair, task("Call the clinic", second, "clinic")]),
             true,
         ),
     ] {
         let (_, service) = fixture();
         let (result, _) =
-            with_proposals(&service, json!({"text":text,"requestId":"scope"}), &[&plan]).await;
+            attempt(&service, json!({"text":text,"requestId":"scope"}), &[&plan]).await;
         if complete {
-            let projected = snapshot(&result);
+            let result = result.unwrap();
+    let projected = snapshot(&result);
             assert_eq!(projected["tasks"].as_array().unwrap().len(), 2);
             assert_eq!(projected["events"].as_array().unwrap().len(), 1);
             assert_session(projected, "Call the clinic", None, "2026-11-11", None);
         } else {
-            assert!(result["preview"].is_null(), "{result}");
+            assert!(result.is_err(), "{result:?}");
             assert!(service.drafts().get_draft().unwrap().is_none());
         }
     }
@@ -463,17 +463,18 @@ async fn date_prefixed_task_neither_lends_its_date_nor_disappears() {
 async fn unrelated_date_does_not_schedule_an_undated_task() {
     let (_, service) = fixture();
     let text = "Create a task to repair the bike. The dentist appointment is tomorrow.";
-    let plan = proposal(&[task(
+    let plan = decision(&[task(
         "Repair the bike",
         "Create a task to repair the bike",
         "t",
     )]);
-    let (result, _) = with_proposals(
+    let (result, _) = attempt(
         &service,
         json!({"text":text,"requestId":"unrelated"}),
         &[&plan],
     )
     .await;
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"].as_array().unwrap().len(), 1);
     assert_eq!(projected["events"], json!([]));
@@ -482,10 +483,15 @@ async fn unrelated_date_does_not_schedule_an_undated_task() {
 #[tokio::test]
 async fn affirmative_calendar_only_request_can_exclude_tasks() {
     let (_, service) = fixture();
-    let result = service.run(json!({
-        "text":"Put a dentist appointment on my calendar today, all day. Do not create a task.",
-        "requestId":"calendar-only"
-    }), None, &CancellationToken::new()).await.unwrap();
+    let text = "Put a dentist appointment on my calendar today, all day. Do not create a task.";
+    let plan = decision(&[event("Dentist appointment", text, "2026-11-10", Value::Null)]);
+    let (result, _) = attempt(
+        &service,
+        json!({"text":text,"requestId":"calendar-only"}),
+        &[&plan],
+    )
+    .await;
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"], json!([]));
     assert_eq!(projected["events"].as_array().unwrap().len(), 1);
@@ -510,31 +516,32 @@ async fn conversational_planner_verbs_authorize_the_same_dated_task_policy() {
         ),
     ] {
         let (_, service) = fixture();
-        let plan = proposal(&[task("Sand the wooden shelf", text, "t")]);
-        let (result, calls) = with_proposals(
+        let plan = decision(&[task("Sand the wooden shelf", text, "t")]);
+        let (result, calls) = attempt(
             &service,
             json!({"text":text,"requestId":"paraphrase"}),
             &[&plan],
         )
         .await;
-        assert_eq!(calls, 1, "{text}: {result}");
-        assert_session(snapshot(&result), "Sand the wooden shelf", None, day, None);
+        assert_eq!(calls, 1, "{text}: {result:?}");
+        assert_session(snapshot(&result.unwrap()), "Sand the wooden shelf", None, day, None);
     }
 }
 
 #[tokio::test]
-async fn scheduling_work_with_explicit_deadline_does_not_need_the_model() {
+async fn scheduling_work_with_explicit_deadline_stages_one_grounded_task() {
     let (_, service) = fixture();
     let text =
         "Schedule work on the model airplane today, and the task must be finished by 2026-11-13.";
-    let result = service
-        .run(
-            json!({"text":text,"requestId":"schedule-work"}),
-            None,
-            &CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+    let plan = decision(&[task("Work on the model airplane", text, "t")]);
+    let (result, calls) = attempt(
+        &service,
+        json!({"text":text,"requestId":"schedule-work"}),
+        &[&plan],
+    )
+    .await;
+    assert_eq!(calls, 1, "{result:?}");
+    let result = result.unwrap();
     assert_session(
         snapshot(&result),
         "Work on the model airplane",
@@ -548,15 +555,15 @@ async fn scheduling_work_with_explicit_deadline_does_not_need_the_model() {
 async fn explicit_task_count_prevents_staging_one_of_two_requested_tasks() {
     let (_, service) = fixture();
     let text = "Add two tasks: write the report Monday and buy milk Monday.";
-    let partial = proposal(&[task("Write the report", text, "t")]);
-    let (result, calls) = with_proposals(
+    let partial = decision(&[task("Write the report", text, "t")]);
+    let (result, calls) = attempt(
         &service,
         json!({"text":text,"requestId":"count"}),
         &[&partial],
     )
     .await;
     assert_eq!(calls, 2);
-    assert!(result["preview"].is_null(), "{result}");
+    assert!(result.is_err(), "{result:?}");
     assert!(service.drafts().get_draft().unwrap().is_none());
 }
 
@@ -564,13 +571,14 @@ async fn explicit_task_count_prevents_staging_one_of_two_requested_tasks() {
 async fn a_date_in_the_reason_for_a_task_is_not_its_work_date() {
     let (_, service) = fixture();
     let text = "I need to buy milk since my flight is tomorrow";
-    let plan = proposal(&[task("Buy milk", text, "t")]);
-    let (result, _) = with_proposals(
+    let plan = decision(&[task("Buy milk", text, "t")]);
+    let (result, _) = attempt(
         &service,
         json!({"text":text,"requestId":"reason"}),
         &[&plan],
     )
     .await;
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"][0]["title"], "Buy milk");
     assert!(projected["tasks"][0]["dueDate"].is_null());
@@ -584,15 +592,21 @@ async fn deletion_companion_can_create_a_dated_task_and_its_linked_session() {
         "changes":[{"action":"create","entity":"task","id":"old","fields":{"title":"Old draft"}}],
         "label":"Fixture","expectedRevision":0,"requestId":"seed"
     })).unwrap();
-    let text = "Delete the task Old draft. Add a task called File report on Friday.";
-    let result = service
-        .run(
-            json!({"text":text,"requestId":"companion"}),
-            None,
-            &CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+    let first = "Delete the task Old draft.";
+    let second = "Add a task called File report on Friday.";
+    let text = format!("{first} {second}");
+    let plan = decision(&[
+        json!({"action":"delete","entity":"task","id":"old","source":first}),
+        task("File report", second, "new"),
+    ]);
+    let (result, calls) = attempt(
+        &service,
+        json!({"text":text,"requestId":"companion"}),
+        &[&plan],
+    )
+    .await;
+    assert_eq!(calls, 1, "{result:?}");
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"].as_array().unwrap().len(), 1);
     assert_session(projected, "File report", None, "2026-11-13", None);
@@ -604,15 +618,15 @@ async fn omitting_a_distinct_explicit_event_does_not_stage_its_companion_task() 
     let (_, service) = fixture();
     let first = "Add a task called Write report Monday";
     let text = format!("{first}. Add an event called Dentist Tuesday.");
-    let partial = proposal(&[task("Write report", first, "t")]);
-    let (result, calls) = with_proposals(
+    let partial = decision(&[task("Write report", first, "t")]);
+    let (result, calls) = attempt(
         &service,
         json!({"text":text,"requestId":"distinct-event"}),
         &[&partial],
     )
     .await;
     assert_eq!(calls, 2);
-    assert!(result["preview"].is_null(), "{result}");
+    assert!(result.is_err(), "{result:?}");
     assert!(service.drafts().get_draft().unwrap().is_none());
 }
 
@@ -623,16 +637,16 @@ async fn explicitly_creating_a_dated_task_preserves_its_deadline_when_the_title_
         "changes":[{"action":"create","entity":"task","id":"old","fields":{"title":"File report"}}],
         "label":"Fixture","expectedRevision":0,"requestId":"seed"
     })).unwrap();
-    let result = service
-        .run(
-            json!({
-                "text":"Add a task called File report Monday due Friday", "requestId":"fresh-task"
-            }),
-            None,
-            &CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+    let text = "Add a task called File report Monday due Friday";
+    let plan = decision(&[task("File report", text, "t")]);
+    let (result, calls) = attempt(
+        &service,
+        json!({"text":text,"requestId":"fresh-task"}),
+        &[&plan],
+    )
+    .await;
+    assert_eq!(calls, 1, "{result:?}");
+    let result = result.unwrap();
     let projected = snapshot(&result);
     assert_eq!(projected["tasks"].as_array().unwrap().len(), 2);
     let new = projected["tasks"]
@@ -653,23 +667,24 @@ async fn each_explicit_event_must_quote_a_different_requested_event() {
     let text = format!("{task_clause}. {dentist_clause}. {flight_clause}.");
     let task = task("Write report", task_clause, "t");
     let dentist = json!({"action":"create","entity":"event","source":dentist_clause,
-        "fields":{"title":"Dentist","startDate":"2026-11-10"}});
+        "fields":{"title":"Dentist","startDate":"2026-11-10","endDate":"2026-11-10"}});
     let duplicate = json!({"action":"create","entity":"event","id":"second-dentist","source":format!("{dentist_clause}."),
-        "fields":{"title":"Dentist","startDate":"2026-11-10"}});
+        "fields":{"title":"Dentist","startDate":"2026-11-10","endDate":"2026-11-10"}});
     let flight = json!({"action":"create","entity":"event","source":flight_clause,
-        "fields":{"title":"Flight","startDate":"2026-11-11"}});
+        "fields":{"title":"Flight","startDate":"2026-11-11","endDate":"2026-11-11"}});
     for (plan, accepted) in [
-        (proposal(&[task.clone(), dentist.clone(), duplicate]), false),
-        (proposal(&[task, dentist, flight]), true),
+        (decision(&[task.clone(), dentist.clone(), duplicate]), false),
+        (decision(&[task, dentist, flight]), true),
     ] {
         let (_, service) = fixture();
-        let (result, calls) = with_proposals(
+        let (result, calls) = attempt(
             &service,
             json!({"text":text,"requestId":"standalone-events"}),
             &[&plan],
         )
         .await;
         if accepted {
+            let result = result.unwrap();
             let events = snapshot(&result)["events"].as_array().unwrap();
             assert_eq!(events.len(), 3);
             for title in ["Dentist", "Flight"] {
@@ -681,8 +696,26 @@ async fn each_explicit_event_must_quote_a_different_requested_event() {
             }
         } else {
             assert_eq!(calls, 2);
-            assert!(result["preview"].is_null(), "{result}");
+            assert!(result.is_err(), "{result:?}");
             assert!(service.drafts().get_draft().unwrap().is_none());
         }
     }
+}
+
+#[tokio::test]
+async fn conversational_replies_pass_through_verbatim_without_a_preview() {
+    let (_, service) = fixture();
+    let (result, calls) = attempt(
+        &service,
+        json!({"text":"What do you think of the plan?","requestId":"chat"}),
+        &[&reply("It looks solid; I would start with the garden plan.")],
+    )
+    .await;
+    assert_eq!(calls, 1);
+    let result = result.unwrap();
+    assert_eq!(
+        result["content"],
+        "It looks solid; I would start with the garden plan."
+    );
+    assert!(result["preview"].is_null());
 }

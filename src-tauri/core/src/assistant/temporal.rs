@@ -117,7 +117,7 @@ pub(super) fn calendar_excluded(text: &str) -> bool {
     calendar_exclusion().is_match(text)
 }
 
-pub(super) fn put_on_calendar(text: &str) -> Option<(&str, &str)> {
+fn put_on_calendar(text: &str) -> Option<(&str, &str)> {
     let c = rx!(r"(?i)^(?:please\s+)?(?:put|place)\s+(?:(?:a|an|the|my)\s+)?(.+?)\s+(?:on|in)\s+(?:(?:my|the)\s+)?calendar\b(.*)$").captures(text)?;
     Some((c.get(1)?.as_str(), c.get(2)?.as_str()))
 }
@@ -138,11 +138,6 @@ pub(super) fn without_exclusion(text: &str) -> String {
         .trim()
         .to_owned()
 }
-pub(super) fn blocked(text: &str) -> bool {
-    let text = without_exclusion(text);
-    rx!(r"(?i)^(?:why|what|when|where|who|how|should|if|imagine|suppose|don['’]t|do not|never)\b|\b(?:what if|do not|don['’]t|never|unless|if (?:possible|i|we|you|they|he|she|it))\b").is_match(&text)
-}
-
 pub(super) fn commitment(text: &str) -> &str {
     rx!(r"(?i)[, ]+(?:because\s+|since\s+(?:i|we|you|they|he|she|it|my|our|your|their|his|her|the|there)\b)")
         .find(text)
@@ -154,15 +149,4 @@ pub(super) fn natural_task(text: &str) -> Option<&str> {
         Regex::new(&format!(r"(?i)^(?:(?:{DEADLINE}\s+)?{DATE}(?:\s+at\s+{TIME})?[, ]+)?i\s+(?:need|want|have)\s+to\s+")).unwrap()
     });
     PREFIX.find(text).map(|m| &text[m.end()..])
-}
-
-pub(super) fn task_subject(mut text: &str) -> &str {
-    static TAIL: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(&format!(r"(?i)[,\s]+(?:(?:(?:{DEADLINE}|on|for)\s+)?{DATE}|all[ -]day|at\s+{TIME}|from\s+{TIME}\s+(?:to|until)\s+{TIME})$")).unwrap()
-    });
-    text = text.trim().trim_end_matches(['.', '!', '?']);
-    while let Some(tail) = TAIL.find(text) {
-        text = text[..tail.start()].trim();
-    }
-    text
 }

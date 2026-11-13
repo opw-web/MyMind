@@ -14,13 +14,13 @@ Standalone sessions have no completion checkbox. Linked session controls reflect
 
 ## AI preview and deliberate saving
 
-Ask for tasks, calendar sessions, corrections, deletions, factual activity or explanations. Every AI write path builds **one pending preview**. Proposed records remain unsaved while you review them. Hover or keyboard-focus an item to reveal it on Calendar or Tasks without losing composer focus. Edit proposed records directly or send a correction; new requests join the pending batch.
+Ask for tasks, calendar sessions, corrections, deletions, factual activity or explanations. Every AI write path builds **one pending preview**. The local model decides each turn: it answers conversationally, asks a clarifying question, or proposes planner changes; the app validates every proposed change against your real records before staging anything. Proposed records remain unsaved while you review them. Hover or keyboard-focus an item to reveal it on Calendar or Tasks without losing composer focus. Edit proposed records directly or send a correction; new requests join the pending batch.
 
 Press **Apply** to save the entire validated batch once. **Dismiss** saves nothing. Required questions block the whole batch. A manual edit made during preview is retained; refresh the preview and choose each conflicting value explicitly before Apply. Ordinary manual actions save immediately, while edits to proposed records or references remain in the proposal. One planner Undo reverses the whole applied batch. Asking the assistant to Undo prepares another preview. Ctrl+Z edits ordinary text normally.
 
 The assistant never uses conversational text as proof of saving: saved receipts come from successful Apply. Questions and hypotheticals remain read-only. New chat clears transient conversation, selections and the pending proposal. There is no conversation archive, embedding store or learned-preference memory.
 
-For explicit deletion, the planner resolves the named tasks and events before preparing the preview. Corrections such as “actually, keep New Age” take precedence. If you ask to remove a task and its associated events, only sessions linked to that task are included. An ambiguous name needs clarification before any deletion is proposed.
+For explicit deletion, the model names the records it wants removed using your catalog; the app only accepts deletes that quote your request and uniquely resolve a real record, and removing a task leaves its calendar sessions independent unless the model also proposes removing them. Ambiguous names are rejected before any preview is staged.
 
 ## Appearance and local model
 
@@ -51,28 +51,19 @@ Development needs Windows x64, Node 22.13+ and an existing [Ollama installation]
 ```powershell
 npm ci
 npm run typecheck
-npm test
-npm run build
-npm run test:desktop
-node tests/preview-desktop.cjs
-node tests/preview-review-desktop.cjs
-node tests/appearance-desktop.cjs
-node tests/deadline-desktop.cjs
-node tests/text-box-desktop.cjs
-npm run test:qwen4 -- --release-gate --profile=deployed --model=qwen3.5:4b --context=16384
-npm run test:qwen4 -- --release-gate --profile=deployed --model=qwen3.5:4b --context=32768
+npm run build:tauri
+cargo test --manifest-path src-tauri/core/Cargo.toml
+cargo build --manifest-path src-tauri/Cargo.toml
 npm run graphify:build
 npm run graphify:check
 ```
 
-The Qwen release gate runs each workflow five times, including the verbatim deletion, a semantic deletion that requires inference, and a long dictation. It checks exact outcomes, zero writes before Apply, and Undo restoration in isolated databases. Both context sizes use the same fixtures and report the installed model digest, active context, GPU residency, tool calls and warm latency. The older `test:model` commands remain the historical 9B comparison. Native tests use isolated data and deterministic Ollama or speech boundaries where stated.
+Native tests use isolated data and deterministic Ollama or speech boundaries where stated.
 
-To rebuild speech, create `.speech-env`, install `speech/requirements.lock.txt`, then `npm run build:speech`. Packaging commands are `npm run package` or `npm run package:msi`. No installer/deployment is implied by passing development checks. Historical [V1](docs/legacy/V1_README.md) and [V2](docs/V2_PLAN.md) documents retain earlier product history.
+To rebuild speech, create `.speech-env`, install `speech/requirements.lock.txt`, then `npm run build:speech`. The Tauri desktop is packaged with `npm run tauri -- build --bundles msi`. No installer/deployment is implied by passing development checks. Historical [V1](docs/legacy/V1_README.md) and [V2](docs/V2_PLAN.md) documents retain earlier product history.
 
-### Native desktop candidate
+### Native desktop
 
-The Tauri candidate uses the same planner and dictation database formats as the Windows release. Its runtime consists of the Rust desktop app, the system WebView, local Ollama, and the bundled Python speech worker.
+The desktop app is Tauri-based and uses the same planner and dictation database formats as earlier releases. Its runtime consists of the Rust desktop app, the system WebView, local Ollama, and the bundled Python speech worker.
 
-On a Windows build machine with the Rust MSVC toolchain and WebView2, first build the speech runtime with the steps above, then use `npm run tauri -- build --bundles msi`. Use `cargo test --locked --manifest-path src-tauri/core/Cargo.toml` for the native core suite. The Tauri desktop smoke harness accepts an executable path and uses a disposable profile. It requires `tauri-driver` and the platform WebDriver.
-
-The Electron patch is built with `npm run package:msi`. Release the Tauri installer after native Windows verification of installation, upgrade, rollback, and microphone and worker lifecycle behavior.
+On a Windows build machine with the Rust MSVC toolchain and WebView2, first build the speech runtime with the steps above, then use `npm run tauri -- build --bundles msi`. Use `cargo test --locked --manifest-path src-tauri/core/Cargo.toml` for the native core suite. Release the installer after native Windows verification of installation, upgrade, rollback, and microphone and worker lifecycle behavior.

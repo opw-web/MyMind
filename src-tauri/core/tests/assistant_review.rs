@@ -1,6 +1,11 @@
+use anyhow::Result;
 use mymind_core::{assistant::PlannerAssistant, database::PlannerDatabase};
 use serde_json::{Value, json};
-use std::sync::{Arc, Mutex};
+use std::{
+    cell::Cell,
+    future::ready,
+    sync::{Arc, Mutex},
+};
 use tokio_util::sync::CancellationToken;
 
 fn fixture() -> (Arc<Mutex<PlannerDatabase>>, PlannerAssistant) {
@@ -19,15 +24,51 @@ fn fixture() -> (Arc<Mutex<PlannerDatabase>>, PlannerAssistant) {
     (db.clone(), PlannerAssistant::new(db))
 }
 
-async fn chat(service: &PlannerAssistant, id: &str, text: &str) -> Value {
-    service
-        .run(
-            json!({"text":text,"requestId":id}),
-            None,
+fn decision(changes: &[Value]) -> String {
+    json!({"kind":"changes","message":"Review the proposed changes.","changes":changes}).to_string()
+}
+
+fn reply_decision(message: &str) -> String {
+    json!({"kind":"reply","message":message}).to_string()
+}
+
+fn kind_only(kind: &str, message: &str) -> String {
+    json!({"kind":kind,"message":message}).to_string()
+}
+
+async fn attempt(
+    service: &PlannerAssistant,
+    request: Value,
+    proposals: &[&str],
+) -> (Result<Value>, usize) {
+    let calls = Cell::new(0);
+    let result = service
+        .run_with(
+            request,
+            Some("qwen-test"),
+            8192,
             &CancellationToken::new(),
+            |_| {
+                let n = calls.get();
+                calls.set(n + 1);
+                ready(Ok(
+                    json!({"message":{"content":proposals[n.min(proposals.len() - 1)]}}),
+                ))
+            },
         )
-        .await
-        .unwrap()
+        .await;
+    (result, calls.get())
+}
+
+async fn chat(service: &PlannerAssistant, id: &str, text: &str, decision_content: &str) -> Value {
+    let (result, calls) = attempt(
+        service,
+        json!({"text":text,"requestId":id}),
+        &[decision_content],
+    )
+    .await;
+    assert_eq!(calls, 1, "{text}: {result:?}");
+    result.unwrap_or_else(|error| panic!("{text}: {error}"))
 }
 
 fn identity(draft: &Value, id: &str) -> Value {
@@ -35,9 +76,21 @@ fn identity(draft: &Value, id: &str) -> Value {
 }
 
 #[tokio::test]
-async fn compound_delete_alias_and_addition_are_previewed_together_and_undoable() {
+async fn compound_ai_proposal_is_previewed_together_and_undoable() {
     let (db, service) = fixture();
-    let reply = chat(&service, "compound", "Remove the community garden plan task and the library fundraiser task and their linked calendar events, then add a task called Write agenda due 2026-11-12").await;
+    let text = "Remove the Apply for Community Garden Plan task and the Library fundraiser task and their linked calendar events, then add a task called Write agenda due 2026-11-12";
+    let reply = chat(
+        &service,
+        "compound",
+        text,
+        &decision(&[
+            json!({"action":"delete","entity":"task","id":"paper","source":"Remove the Apply for Community Garden Plan task"}),
+            json!({"action":"delete","entity":"task","id":"hall","source":"the Library fundraiser task"}),
+            json!({"action":"delete","entity":"event","id":"linked","source":"their linked calendar events"}),
+            json!({"action":"create","entity":"task","source":"add a task called Write agenda due 2026-11-12","fields":{"title":"Write agenda","dueDate":"2026-11-12"}}),
+        ]),
+    )
+    .await;
     let draft = &reply["preview"]["draft"];
     assert_eq!(
         draft["projectedSnapshot"]["tasks"][0]["title"], "Write agenda",
@@ -67,7 +120,7 @@ async fn compound_delete_alias_and_addition_are_previewed_together_and_undoable(
             .unwrap(),
         receipt
     );
-    let undo = chat(&service, "undo", "Undo that").await;
+    let undo = chat(&service, "undo", "Undo that", &kind_only("undo", "Undo prepared.")).await;
     let draft = &undo["preview"]["draft"];
     assert_eq!(
         draft["projectedSnapshot"]["tasks"]
@@ -91,61 +144,43 @@ async fn compound_delete_alias_and_addition_are_previewed_together_and_undoable(
 }
 
 #[tokio::test]
-async fn unresolved_deletion_blocks_existing_preview_until_explicit_replacement() {
+async fn a_delete_without_a_unique_named_target_is_rejected_without_changes() {
     let (db, service) = fixture();
-    chat(
+    db.lock().unwrap().mutate(json!({"requestId":"duplicate","expectedRevision":1,"label":"Duplicate","changes":[
+        {"action":"create","entity":"task","id":"paper2","fields":{"title":"Apply for Community Garden Plan"}}
+    ]})).unwrap();
+    let before = db.lock().unwrap().snapshot().unwrap();
+    let text = "Delete the Apply for Community Garden Plan task.";
+    let (result, calls) = attempt(
         &service,
-        "create",
-        "Add a task called Write agenda due 2026-11-12",
+        json!({"text":text,"requestId":"ambiguous"}),
+        &[&decision(&[
+            json!({"action":"delete","entity":"task","id":"paper2","source":text}),
+        ])],
     )
     .await;
-    let ambiguous = chat(
-        &service,
-        "ambiguous",
-        "Delete the Library fundraiser task and keep the Missing task",
-    )
-    .await;
-    assert!(ambiguous["preview"].is_null());
-    let draft = service.drafts().get_draft().unwrap().unwrap();
-    assert_eq!(draft["unresolved"][0]["field"], "deletionScope");
+    assert_eq!(calls, 2, "one repair may run: {result:?}");
+    let error = result.expect_err("ambiguous delete must not stage");
     assert!(
-        service
-            .drafts()
-            .apply_draft(identity(&draft, "blocked"))
-            .is_err()
+        error.to_string().contains("unique named or selected delete target"),
+        "{error}"
     );
-    assert_eq!(db.lock().unwrap().revision().unwrap(), 1);
-    let reply = chat(
-        &service,
-        "replace",
-        "Instead, delete the Library fundraiser task only",
-    )
-    .await;
-    let draft = &reply["preview"]["draft"];
-    assert_eq!(draft["unresolved"], json!([]), "{reply}");
-    assert_eq!(
-        draft["projectedSnapshot"]["events"]
-            .as_array()
-            .unwrap()
-            .len(),
-        2
-    );
-    assert!(
-        draft["projectedSnapshot"]["events"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .all(|event| event["linkedTaskId"].is_null())
-    );
+    assert!(service.drafts().get_draft().unwrap().is_none());
+    assert_eq!(db.lock().unwrap().snapshot().unwrap(), before);
 }
 
 #[tokio::test]
 async fn an_existing_saved_revision_is_required_to_edit_or_apply() {
     let (db, service) = fixture();
+    let text = "Add a task called Write agenda due 2026-11-12";
     let reply = chat(
         &service,
         "create",
-        "Add a task called Write agenda due 2026-11-12",
+        text,
+        &decision(&[json!({
+            "action":"create","entity":"task","source":text,
+            "fields":{"title":"Write agenda","dueDate":"2026-11-12"}
+        })]),
     )
     .await;
     let draft = &reply["preview"]["draft"];
@@ -172,9 +207,20 @@ async fn an_existing_saved_revision_is_required_to_edit_or_apply() {
 }
 
 #[tokio::test]
-async fn including_each_task_resolves_the_current_named_group_and_excludes_standalone_events() {
+async fn deleting_tasks_and_their_linked_sessions_keeps_standalone_events() {
     let (_db, service) = fixture();
-    let reply = chat(&service, "each", "Delete both Apply for Community Garden Plan and Library fundraiser, including every calendar session linked to each task.").await;
+    let text = "Delete the Apply for Community Garden Plan task and the Library fundraiser task, including every calendar session linked to each task.";
+    let reply = chat(
+        &service,
+        "each",
+        text,
+        &decision(&[
+            json!({"action":"delete","entity":"task","id":"paper","source":"Delete the Apply for Community Garden Plan task"}),
+            json!({"action":"delete","entity":"task","id":"hall","source":"the Library fundraiser task"}),
+            json!({"action":"delete","entity":"event","id":"linked","source":"including every calendar session linked to each task"}),
+        ]),
+    )
+    .await;
     let draft = &reply["preview"]["draft"];
     assert_eq!(draft["projectedSnapshot"]["tasks"], json!([]), "{reply}");
     assert_eq!(
@@ -188,33 +234,19 @@ async fn including_each_task_resolves_the_current_named_group_and_excludes_stand
 }
 
 #[tokio::test]
-async fn both_named_targets_cannot_expand_one_of_them_into_duplicate_tasks() {
-    let (db, service) = fixture();
-    db.lock().unwrap().mutate(json!({"requestId":"duplicate","expectedRevision":1,"label":"Duplicate","changes":[
-        {"action":"create","entity":"task","id":"paper2","fields":{"title":"Apply for Community Garden Plan"}}
-    ]})).unwrap();
-    let reply = chat(&service, "both", "Delete both Apply for Community Garden Plan task and Library fundraiser task, including every calendar session linked to each task.").await;
-    assert!(reply["preview"].is_null(), "{reply}");
-    assert!(reply["content"].as_str().unwrap().contains("several"));
-}
-
-#[tokio::test]
-async fn each_task_does_not_reuse_a_previous_group_after_a_new_command() {
-    let (_db, service) = fixture();
-    let reply = chat(
-        &service,
-        "each",
-        "Delete the Library fundraiser task. Delete every calendar session linked to each task.",
-    )
-    .await;
-    assert!(reply["preview"].is_null(), "{reply}");
-}
-
-#[tokio::test]
-async fn protected_linked_event_detaches_and_standalone_event_is_unchanged() {
+async fn kept_linked_event_detaches_and_standalone_event_is_unchanged() {
     let (db, service) = fixture();
     let before = db.lock().unwrap().snapshot().unwrap();
-    let reply = chat(&service, "protect", "Delete the Library fundraiser task and its linked calendar events, but keep the Prep work event and the standalone Library fundraiser.").await;
+    let text = "Delete the Library fundraiser task and its linked calendar events, but keep the Prep work event and the standalone Library fundraiser.";
+    let reply = chat(
+        &service,
+        "protect",
+        text,
+        &decision(&[
+            json!({"action":"delete","entity":"task","id":"hall","source":"Delete the Library fundraiser task"}),
+        ]),
+    )
+    .await;
     let draft = &reply["preview"]["draft"];
     let events = draft["projectedSnapshot"]["events"].as_array().unwrap();
     assert_eq!(events.len(), 2, "{reply}");
@@ -232,32 +264,7 @@ async fn protected_linked_event_detaches_and_standalone_event_is_unchanged() {
 }
 
 #[tokio::test]
-async fn deletion_model_must_confirm_each_verbatim_source_and_grounded_candidate() {
-    let (_db, service) = fixture();
-    let source = "the task about submitting the community garden plan application";
-    let text = format!(
-        "Delete {source} and the Library fundraiser task, but keep the standalone Library fundraiser."
-    );
-    for (id, target, supplied, accepted) in [
-        ("invented", "task:paper", "invented source", false),
-        ("other", "task:hall", source, false),
-        ("confirmed", "task:paper", source, true),
-    ] {
-        let token = CancellationToken::new();
-        let result = service.run_with(json!({"requestId":id,"text":text}), Some("qwen-test"), 8192, &token, |body| {
-            assert!(body["format"].is_object());
-            let user: Value = serde_json::from_str(body["messages"][1]["content"].as_str().unwrap()).unwrap();
-            assert_eq!(user["clauses"][0]["source"], source);
-            assert_eq!(user["clauses"][0]["candidates"][0]["key"], "task:paper");
-            std::future::ready(Ok(json!({"message":{"content":json!({"matches":[{"clause":1,"source":supplied,"target":target}]}).to_string()}})))
-        }).await.unwrap();
-        assert_eq!(!result["preview"].is_null(), accepted, "{result}");
-        assert_eq!(service.drafts().get_draft().unwrap().is_some(), accepted);
-    }
-}
-
-#[tokio::test]
-async fn structured_create_rejects_model_deletion_and_unstated_dates() {
+async fn structured_create_rejects_ungrounded_deletions_and_unstated_dates() {
     let (db, service) = fixture();
     let token = CancellationToken::new();
     let text = "Add a task called Read paper due 2026-11-15 and a task called Summarize paper";
@@ -265,7 +272,7 @@ async fn structured_create_rejects_model_deletion_and_unstated_dates() {
     for (id, second, accepted) in [
         (
             "deleted",
-            json!({"action":"delete","entity":"task","id":"paper","source":"Add a task called Read paper","fields":{}}),
+            json!({"action":"delete","entity":"task","id":"paper","source":"Add a task called Read paper"}),
             false,
         ),
         (
@@ -279,7 +286,7 @@ async fn structured_create_rejects_model_deletion_and_unstated_dates() {
             true,
         ),
     ] {
-        let response = json!({"message":{"content":json!({"changes":[valid,second]}).to_string()}});
+        let response = json!({"message":{"content":decision(&[valid.clone(),second])}});
         let result = service
             .run_with(
                 json!({"requestId":id,"text":text}),
@@ -294,9 +301,8 @@ async fn structured_create_rejects_model_deletion_and_unstated_dates() {
                     std::future::ready(Ok(response.clone()))
                 },
             )
-            .await
-            .unwrap();
-        assert_eq!(!result["preview"].is_null(), accepted, "{result}");
+            .await;
+        assert_eq!(result.as_ref().map(|value| !value["preview"].is_null()).unwrap_or(false), accepted, "{result:?}");
         assert_eq!(db.lock().unwrap().revision().unwrap(), 1);
     }
 }
@@ -311,34 +317,16 @@ async fn cancelling_model_inference_never_publishes_a_draft_or_leaves_it_busy() 
     }).await;
     assert!(result.unwrap_err().to_string().contains("stopped"));
     assert!(service.drafts().get_draft().unwrap().is_none());
-    assert!(
-        chat(&service, "next", "Add a task called Write agenda").await["preview"]["draft"]["busy"]
-            == false
-    );
-}
-
-#[tokio::test]
-async fn date_answer_resolves_its_request_issue_and_keeps_earlier_work_pending() {
-    let (db, service) = fixture();
-    chat(&service, "create", "Add a task called Write agenda").await;
-    let reply = chat(&service, "missing", "Add an event called Jazz Night").await;
-    let draft = &reply["preview"]["draft"];
-    let issue = &draft["unresolved"][0]["id"];
-    assert!(
-        service
-            .drafts()
-            .apply_draft(identity(draft, "apply-blocked"))
-            .is_err()
-    );
-    let reply = service.run(json!({"requestId":"answer","text":"2026-11-14 from 19:00 to 21:00","clarificationIssueId":issue}), None, &CancellationToken::new()).await.unwrap();
-    let next = &reply["preview"]["draft"];
-    assert_eq!(next["id"], draft["id"]);
-    assert_eq!(next["unresolved"], json!([]), "{reply}");
-    let events = next["projectedSnapshot"]["events"].as_array().unwrap();
-    assert!(events.iter().any(|e| e["title"] == "Jazz Night"
-        && e["startDate"] == "2026-11-14"
-        && e["startTime"] == "19:00"));
-    assert_eq!(db.lock().unwrap().revision().unwrap(), 1);
+    let text = "Add a task called Write agenda";
+    let (result, _) = attempt(
+        &service,
+        json!({"text":text,"requestId":"next"}),
+        &[&decision(&[json!({
+            "action":"create","entity":"task","source":text,"fields":{"title":"Write agenda"}
+        })])],
+    )
+    .await;
+    assert_eq!(result.unwrap()["preview"]["draft"]["busy"], false);
 }
 
 #[tokio::test]
@@ -347,7 +335,16 @@ async fn preview_retains_generated_category_ids_when_the_user_edits_them() {
         PlannerDatabase::open(":memory:".as_ref()).unwrap(),
     ));
     let assistant = PlannerAssistant::new(db.clone());
-    let reply = chat(&assistant, "category", "Add a task called Buy milk").await;
+    let text = "Add a task called Buy milk";
+    let reply = chat(
+        &assistant,
+        "category",
+        text,
+        &decision(&[json!({
+            "action":"create","entity":"task","source":text,"fields":{"title":"Buy milk"}
+        })]),
+    )
+    .await;
     let draft = &reply["preview"]["draft"];
     let category = &draft["projectedSnapshot"]["categories"][0]["id"];
     assert!(category.is_string());
@@ -379,88 +376,21 @@ async fn preview_retains_generated_category_ids_when_the_user_edits_them() {
 }
 
 #[tokio::test]
-async fn both_requires_exactly_two_matches_in_a_named_plural_group() {
+async fn conversational_replies_pass_through_verbatim() {
     let (db, assistant) = fixture();
-    db.lock().unwrap().mutate(json!({"requestId":"third","expectedRevision":1,"label":"Duplicate","changes":[
-        {"action":"create","entity":"task","id":"hall-two","fields":{"title":"Library fundraiser"}},
-        {"action":"create","entity":"task","id":"hall-three","fields":{"title":"Library fundraiser"}}
-    ]})).unwrap();
-    let before = db.lock().unwrap().snapshot().unwrap();
-    let result = chat(
-        &assistant,
-        "both-three",
-        "Delete both Library fundraiser tasks.",
-    )
-    .await;
-    assert!(result["preview"].is_null(), "{result}");
-    assert!(result["content"].as_str().unwrap().contains("Which two"));
-    assert_eq!(db.lock().unwrap().snapshot().unwrap(), before);
-}
-
-#[tokio::test]
-async fn embedded_corrections_cannot_be_treated_as_delete_descriptions() {
-    let (db, assistant) = fixture();
-    let before = db.lock().unwrap().snapshot().unwrap();
-    let text = "Delete the task about applying for project nine lives wait actually keep it.";
-    let result = assistant
-        .run_with(
-            json!({"text":text,"requestId":"protect"}),
-            Some("qwen3.5:4b"),
-            32768,
-            &CancellationToken::new(),
-            |_| async {
-                panic!("A deletion description with an inline correction must not call the model.");
-            },
-        )
-        .await
-        .unwrap();
-    assert!(result["preview"].is_null(), "{result}");
-    assert_eq!(db.lock().unwrap().snapshot().unwrap(), before);
-}
-
-#[tokio::test]
-async fn reads_schedule_and_completion_from_records_instead_of_title_words() {
-    let (db, assistant) = fixture();
-    let scheduled = chat(
+    let reply = chat(
         &assistant,
         "scheduled",
-        "What tasks are scheduled on 2026-11-12?",
+        "What is on my schedule on 2026-11-12?",
+        &reply_decision("On 2026-11-12 you have the Library fundraiser."),
     )
     .await;
-    assert!(
-        scheduled["content"]
-            .as_str()
-            .unwrap()
-            .contains("Library fundraiser")
+    assert_eq!(
+        reply["content"],
+        "On 2026-11-12 you have the Library fundraiser."
     );
-    assert!(
-        !scheduled["content"]
-            .as_str()
-            .unwrap()
-            .contains("Community Garden Plan")
-    );
-    db.lock()
-        .unwrap()
-        .mutate(
-            json!({"requestId":"done","expectedRevision":1,"label":"Done","changes":[
-                {"action":"update","entity":"task","id":"paper","fields":{"completed":true}}
-            ]}),
-        )
-        .unwrap();
-    let completed = chat(&assistant, "completed", "Show completed tasks").await;
-    assert!(
-        completed["content"]
-            .as_str()
-            .unwrap()
-            .contains("Community Garden Plan")
-    );
-    assert!(
-        !completed["content"]
-            .as_str()
-            .unwrap()
-            .contains("Library fundraiser")
-    );
-    assert_eq!(db.lock().unwrap().revision().unwrap(), 2);
+    assert!(reply["preview"].is_null());
+    assert_eq!(db.lock().unwrap().revision().unwrap(), 1);
 }
 
 #[tokio::test]
@@ -469,10 +399,15 @@ async fn adding_a_step_preserves_existing_checklist_ids_and_waits_for_apply() {
     db.lock().unwrap().mutate(json!({"requestId":"steps","expectedRevision":1,"label":"Seed steps","changes":[
         {"action":"update","entity":"task","id":"paper","fields":{"steps":[{"id":"original","title":"Draft application","completed":true}]}}
     ]})).unwrap();
+    let text = "Add a step to Apply for Community Garden Plan: Review conclusions.";
     let result = chat(
         &assistant,
         "step",
-        "Add a step to Apply for Community Garden Plan: Review conclusions.",
+        text,
+        &decision(&[json!({
+            "action":"update","entity":"task","id":"paper","source":text,
+            "fields":{"steps":["Draft application","Review conclusions"]}
+        })]),
     )
     .await;
     let draft = &result["preview"]["draft"];
@@ -493,4 +428,70 @@ async fn adding_a_step_preserves_existing_checklist_ids_and_waits_for_apply() {
         .apply_draft(identity(draft, "apply-step"))
         .unwrap();
     assert_eq!(db.lock().unwrap().revision().unwrap(), 3);
+}
+
+#[tokio::test]
+async fn restore_kind_brings_back_a_removed_record_after_apply() {
+    let (db, service) = fixture();
+    let text = "Delete the Library fundraiser task";
+    let reply = chat(
+        &service,
+        "delete",
+        text,
+        &decision(&[json!({
+            "action":"delete","entity":"task","id":"hall","source":text
+        })]),
+    )
+    .await;
+    let draft = &reply["preview"]["draft"];
+    service
+        .drafts()
+        .apply_draft(identity(draft, "apply-delete"))
+        .unwrap();
+    assert!(db.lock().unwrap().snapshot().unwrap()["tasks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|task| task["id"] != "hall"));
+    let (result, calls) = attempt(
+        &service,
+        json!({"text":"Bring back the Library fundraiser task","requestId":"restore"}),
+        &[&json!({
+            "kind":"restore","message":"Restoration prepared.",
+            "targetEntity":"task","targetId":"hall"
+        })
+        .to_string()],
+    )
+    .await;
+    assert_eq!(calls, 1);
+    let restored = result.unwrap();
+    let draft = &restored["preview"]["draft"];
+    assert!(draft["projectedSnapshot"]["tasks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|task| task["id"] == "hall"));
+    service
+        .drafts()
+        .apply_draft(identity(draft, "apply-restore"))
+        .unwrap();
+    assert!(db.lock().unwrap().snapshot().unwrap()["tasks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|task| task["id"] == "hall"));
+}
+
+#[tokio::test]
+async fn a_missing_model_is_reported_instead_of_a_built_in_reply() {
+    let (_db, service) = fixture();
+    let error = service
+        .run(
+            json!({"text":"Add a task called Write agenda","requestId":"no-model"}),
+            None,
+            &CancellationToken::new(),
+        )
+        .await
+        .expect_err("no model must not produce a canned planner reply");
+    assert!(error.to_string().contains("model"), "{error}");
 }
