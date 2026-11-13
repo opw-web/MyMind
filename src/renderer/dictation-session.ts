@@ -75,13 +75,31 @@ class DictationSession {
     void window.planner.startSpeech().catch(e=>{if(this.capture===c&&!c.stopping)this.fail(e,'Speech is unavailable. Your recording is still being saved.');});
     try{
       c.draft=await window.planner.createDictation({generation:this.generation,prefix});
-      if(c.stopping||this.capture!==c)return;
-      this.update({draft:c.draft});void this.refresh();
-      if(!MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))throw new Error('WebM recording is unavailable. Reinstall MYMIND.');
+    }catch(e){
+      this.release(c);
+      if(this.capture===c&&!c.stopping){this.update({phase:'failed'});this.fail(e,'Could not prepare the dictation draft.');}
+      return;
+    }
+    if(c.stopping||this.capture!==c)return;
+    this.update({draft:c.draft});void this.refresh();
+    if(!MediaRecorder.isTypeSupported('audio/webm;codecs=opus')){this.release(c);if(this.capture===c&&!c.stopping){this.update({phase:'failed'});this.fail(new Error('WebM recording is unavailable.'),'WebM recording is unavailable. Reinstall MYMIND.');}return;}
+    try{
       c.context=new AudioContext({sampleRate:16000});await c.context.resume();
-      if(c.stopping||this.capture!==c){this.release(c);return;}
+    }catch(e){
+      this.release(c);
+      if(this.capture===c&&!c.stopping){this.update({phase:'failed'});this.fail(e,'Audio recording is unavailable in this environment.');}
+      return;
+    }
+    if(c.stopping||this.capture!==c){this.release(c);return;}
+    try{
       c.stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
-      if(c.stopping||this.capture!==c){this.release(c);return;}
+    }catch(e){
+      this.release(c);
+      if(this.capture===c&&!c.stopping){this.update({phase:'failed'});this.fail(e,'Could not open the microphone. Any existing draft is retained.');}
+      return;
+    }
+    if(c.stopping||this.capture!==c){this.release(c);return;}
+    try{
       const recorder=new MediaRecorder(c.stream,{mimeType:'audio/webm;codecs=opus',audioBitsPerSecond:64000});c.recorder=recorder;
       c.stopped=new Promise(resolve=>{recorder.onstop=()=>resolve();});
       recorder.ondataavailable=event=>{
@@ -121,7 +139,7 @@ class DictationSession {
       }catch(e){if(!c.stopping)this.fail(e,'Live text is unavailable. Your complete recording is still being saved.');}
     }catch(e){
       this.release(c);
-      if(this.capture===c&&!c.stopping){this.update({phase:'failed'});this.fail(e,'Could not open the microphone. Any existing draft is retained.');}
+      if(this.capture===c&&!c.stopping){this.update({phase:'failed'});this.fail(e,'The recorder could not start. Any existing draft is retained.');}
     }
   }
   private async preview(c:Capture){

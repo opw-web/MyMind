@@ -3,6 +3,47 @@
 #[cfg(windows)]
 mod windows_resume;
 
+/// WebView2 denies microphone access by default; grant it for dictation.
+#[cfg(windows)]
+mod media_permission {
+    use tauri::WebviewWindow;
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2, ICoreWebView2PermissionRequestedEventArgs,
+        ICoreWebView2PermissionRequestedEventHandler, COREWEBVIEW2_PERMISSION_KIND_MICROPHONE,
+        COREWEBVIEW2_PERMISSION_STATE_ALLOW,
+    };
+    use windows::core::implement;
+
+    #[implement(ICoreWebView2PermissionRequestedEventHandler)]
+    struct GrantMicrophone;
+
+    impl ICoreWebView2PermissionRequestedEventHandler_Impl for GrantMicrophone {
+        fn Invoke(
+            &self,
+            _sender: Option<&ICoreWebView2>,
+            args: Option<&ICoreWebView2PermissionRequestedEventArgs>,
+        ) -> windows::core::Result<()> {
+            if let Some(args) = args {
+                let kind = unsafe { args.PermissionKind() }?;
+                if kind == COREWEBVIEW2_PERMISSION_KIND_MICROPHONE {
+                    unsafe { args.SetState(COREWEBVIEW2_PERMISSION_STATE_ALLOW) }?;
+                }
+            }
+            Ok(())
+        }
+    }
+
+    pub fn install(window: &WebviewWindow) {
+        let _ = window.with_webview(|webview| {
+            let core = webview.controller().CoreWebView2()?;
+            let handler: ICoreWebView2PermissionRequestedEventHandler = GrantMicrophone.into();
+            let mut token: i64 = 0;
+            unsafe { core.add_PermissionRequested(&handler, &mut token) }?;
+            Ok::<_, windows::core::Error>(())
+        });
+    }
+}
+
 use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
@@ -655,6 +696,8 @@ fn main() {
                 builder = builder.theme(Some(theme));
             }
             let window = builder.build()?;
+            #[cfg(windows)]
+            media_permission::install(&window);
             #[cfg(windows)]
             windows_resume::install(&window, model.clone())?;
             let close_window = window.clone();
