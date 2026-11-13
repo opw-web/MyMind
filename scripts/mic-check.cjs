@@ -1,9 +1,9 @@
 // Microphone permission probe for the Tauri desktop app.
-// Connects to the app over CDP (launch WebView2 with
-// WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222) and
-// verifies getUserMedia resolves. With the fake audio device flags this works
-// on machines without a microphone; pre-fix WebView2 denies the request with
-// NotAllowedError.
+// Connects to the app over CDP (launch it with
+// MYMIND_BROWSER_ARGS=--remote-debugging-port=9222 ...) and verifies
+// getUserMedia resolves in the real planner page. With the fake audio device
+// flags this works on machines without a microphone; pre-fix WebView2 denies
+// the request with NotAllowedError.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 
@@ -12,8 +12,24 @@ const port = process.env.MYMIND_CDP_PORT || '9222';
 (async () => {
   const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
   try {
-    const page = browser.contexts()[0]?.pages()[0];
-    assert(page, 'no page found in the desktop app');
+    let page;
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      const pages = browser.contexts().flatMap(context => context.pages());
+      const candidate =
+        pages.find(item => item.url().includes('tauri.localhost')) ?? pages[0];
+      if (
+        candidate &&
+        (await candidate
+          .evaluate(() => !!navigator.mediaDevices?.getUserMedia)
+          .catch(() => false))
+      ) {
+        page = candidate;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    assert(page, 'no planner page with media devices found');
     const result = await page.evaluate(() =>
       navigator.mediaDevices
         .getUserMedia({ audio: true })
