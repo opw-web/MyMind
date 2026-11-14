@@ -46,7 +46,9 @@ Close the app before copying the entire data directory for a manual backup; keep
 
 ## Build and verify
 
-Development needs Windows x64, Node 22.13+ and an existing [Ollama installation](https://ollama.com/download/windows) with eligible local weights. Install qwen3.5:4b in Ollama before using the default. Python 3.12 and the pinned speech build environment are needed only when rebuilding bundled speech assets.
+Development needs Windows x64, Node 22.13+, and an existing [Ollama installation](https://ollama.com/download/windows) with eligible local weights. Install qwen3.5:4b in Ollama before using the default. Python 3.12 and the pinned speech build environment are needed only when rebuilding bundled speech assets.
+
+**Run the app:** double-click `Run MYMIND.cmd`. On first run it installs dependencies, builds the local speech runtime and the release desktop, and creates a desktop shortcut pointing at the same file; every later run (shortcut or the file itself) starts MYMIND immediately. To do it from a terminal instead, run `powershell -ExecutionPolicy Bypass -File scripts/setup.ps1` once and then use the shortcut.
 
 ```powershell
 npm ci
