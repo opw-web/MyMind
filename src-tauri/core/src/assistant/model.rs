@@ -13,30 +13,7 @@ use anyhow::{Result, anyhow, ensure};
 use chrono::NaiveDate;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::{
-    collections::{HashMap, HashSet},
-    future::Future,
-};
-use tokio_util::sync::CancellationToken;
-pub(super) async fn inference<F, Fut>(
-    infer: &F,
-    body: Value,
-    token: &CancellationToken,
-) -> Result<Option<String>>
-where
-    F: Fn(Value) -> Fut,
-    Fut: Future<Output = Result<Value>>,
-{
-    let response = tokio::select! {
-        biased;
-        _ = token.cancelled() => return Err(anyhow!("Request stopped. No changes saved.")),
-        result = infer(body) => result,
-    };
-    ensure!(!token.is_cancelled(), "Request stopped. No changes saved.");
-    Ok(response
-        .ok()
-        .and_then(|response| response["message"]["content"].as_str().map(str::to_owned)))
-}
+use std::collections::{HashMap, HashSet};
 
 pub(super) fn chat_body(
     model: &str,
