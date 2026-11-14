@@ -833,6 +833,90 @@
       "_origin": "semantic"
     },
     {
+      "id": "_github_workflows_checks_document",
+      "label": ".github\\workflows\\checks.yml",
+      "file_type": "document",
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic"
+    },
+    {
+      "id": "_github_workflows_checks_source_checks",
+      "label": "Windows GitHub Actions source checks",
+      "file_type": "concept",
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": "lines 1-48",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic"
+    },
+    {
+      "id": "_github_workflows_checks_node22",
+      "label": "Node 22 CI with npm ci",
+      "file_type": "concept",
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": "lines 9-14",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic"
+    },
+    {
+      "id": "_github_workflows_checks_tauri_build",
+      "label": "Vite Tauri renderer build",
+      "file_type": "concept",
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": "lines 18-19",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic"
+    },
+    {
+      "id": "_github_workflows_checks_core_tests",
+      "label": "Rust mymind-core cargo test",
+      "file_type": "concept",
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": "lines 20-22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic"
+    },
+    {
+      "id": "_github_workflows_checks_desktop_build",
+      "label": "Rust desktop cargo build",
+      "file_type": "concept",
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": "lines 28-30",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic"
+    },
+    {
+      "id": "_github_workflows_checks_mic_probe",
+      "label": "WebView2 microphone permission probe via CDP",
+      "file_type": "concept",
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": "lines 31-48",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "_origin": "semantic"
+    },
+    {
       "id": "readme_document",
       "label": "MYMIND Bloom usage and verification",
       "file_type": "document",
@@ -1065,7 +1149,7 @@
     },
     {
       "id": "readme_run_launcher",
-      "label": "Double-click Run MYMIND.cmd builds on first use then starts the app",
+      "label": "Double-click Run MYMIND.cmd sets up a fresh laptop then starts the app",
       "file_type": "concept",
       "source_file": "README.md",
       "source_location": "Build and verify",
@@ -1074,7 +1158,7 @@
       "author": null,
       "contributor": null,
       "_origin": "semantic",
-      "rationale": "The launcher runs scripts/setup.ps1 when the release binary, node_modules, or speech runtime are missing; setup installs dependencies, builds the speech runtime and release desktop, stages speech resources, and creates a desktop shortcut to the launcher."
+      "rationale": "The launcher runs scripts/setup.ps1 when the release binary, node_modules, or speech runtime are missing; setup winget-installs Node 22, rustup with MSVC build tools, Python 3.12 and Ollama when absent, pulls qwen3.5:4b, builds the speech runtime and release desktop, and creates a desktop shortcut to the launcher."
     },
     {
       "id": "readme_build_verify",
@@ -1113,90 +1197,6 @@
       "contributor": null,
       "_origin": "semantic",
       "rationale": "The Windows CI job launches the built app with remote debugging and fake media flags and asserts getUserMedia resolves, guarding the WebView2 microphone grant."
-    },
-    {
-      "id": "_github_workflows_checks_document",
-      "label": ".github\\workflows\\checks.yml",
-      "file_type": "document",
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "_origin": "semantic"
-    },
-    {
-      "id": "_github_workflows_checks_source_checks",
-      "label": "Windows GitHub Actions source checks",
-      "file_type": "concept",
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": "lines 1-48",
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "_origin": "semantic"
-    },
-    {
-      "id": "_github_workflows_checks_node22",
-      "label": "Node 22 CI with npm ci",
-      "file_type": "concept",
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": "lines 9-14",
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "_origin": "semantic"
-    },
-    {
-      "id": "_github_workflows_checks_tauri_build",
-      "label": "Vite Tauri renderer build",
-      "file_type": "concept",
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": "lines 18-19",
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "_origin": "semantic"
-    },
-    {
-      "id": "_github_workflows_checks_core_tests",
-      "label": "Rust mymind-core cargo test",
-      "file_type": "concept",
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": "lines 20-22",
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "_origin": "semantic"
-    },
-    {
-      "id": "_github_workflows_checks_desktop_build",
-      "label": "Rust desktop cargo build",
-      "file_type": "concept",
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": "lines 28-30",
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "_origin": "semantic"
-    },
-    {
-      "id": "_github_workflows_checks_mic_probe",
-      "label": "WebView2 microphone permission probe via CDP",
-      "file_type": "concept",
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": "lines 31-48",
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "_origin": "semantic"
     }
   ],
   "edges": [
@@ -1911,6 +1911,116 @@
       "_origin": "semantic"
     },
     {
+      "source": "_github_workflows_checks_document",
+      "target": "_github_workflows_checks_source_checks",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_document",
+      "target": "_github_workflows_checks_node22",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_document",
+      "target": "_github_workflows_checks_tauri_build",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_document",
+      "target": "_github_workflows_checks_core_tests",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_document",
+      "target": "_github_workflows_checks_desktop_build",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_document",
+      "target": "_github_workflows_checks_mic_probe",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_source_checks",
+      "target": "_github_workflows_checks_tauri_build",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_source_checks",
+      "target": "_github_workflows_checks_core_tests",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_source_checks",
+      "target": "_github_workflows_checks_desktop_build",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
+      "source": "_github_workflows_checks_source_checks",
+      "target": "_github_workflows_checks_mic_probe",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/workflows/checks.yml",
+      "source_location": null,
+      "weight": 1.0,
+      "_origin": "semantic"
+    },
+    {
       "source": "readme_document",
       "target": "readme_workspaces",
       "relation": "references",
@@ -2206,122 +2316,12 @@
       "source_location": null,
       "weight": 1.0,
       "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_document",
-      "target": "_github_workflows_checks_source_checks",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_document",
-      "target": "_github_workflows_checks_node22",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_document",
-      "target": "_github_workflows_checks_tauri_build",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_document",
-      "target": "_github_workflows_checks_core_tests",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_document",
-      "target": "_github_workflows_checks_desktop_build",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_document",
-      "target": "_github_workflows_checks_mic_probe",
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_source_checks",
-      "target": "_github_workflows_checks_tauri_build",
-      "relation": "implements",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_source_checks",
-      "target": "_github_workflows_checks_core_tests",
-      "relation": "implements",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_source_checks",
-      "target": "_github_workflows_checks_desktop_build",
-      "relation": "implements",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
-    },
-    {
-      "source": "_github_workflows_checks_source_checks",
-      "target": "_github_workflows_checks_mic_probe",
-      "relation": "implements",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/workflows/checks.yml",
-      "source_location": null,
-      "weight": 1.0,
-      "_origin": "semantic"
     }
   ],
   "hyperedges": [],
   "source_hashes": {
     ".github/workflows/checks.yml": "d35a753e4eea50b0d7c1b934ebeddb5e40b45ec30e4963fd1fb997b1176e01d0",
-    "README.md": "1653d1b7243086dacae3ce334dcbeb578938f3c9934986ac73bcd17f110a3bbd",
+    "README.md": "32e9fb65b7e63ef9a405e1189a83abe917063001f7c829bcc77f1866e92fa84b",
     "THIRD_PARTY_NOTICES.md": "14d4a7b4613fe094570640fa75b2839022fcba7fe426b0da9428bc5caac98dda",
     "VALIDATION.md": "6060a1e564cccbb06aed415a4d6451f3a596e25a38638a397c7b0b3be50381e5",
     "assets/icon.png": "43fa89f5307c75d9741d164dff73350be7f089a5998545643348b869662797b1",
