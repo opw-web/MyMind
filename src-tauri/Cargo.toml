@@ -8,7 +8,7 @@ name = "MYMIND"
 path = "src/main.rs"
 
 [build-dependencies]
-tauri-build = "2"
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
 anyhow = "1"
@@ -16,7 +16,7 @@ fs2 = "0.4"
 mymind-core = { path = "core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri = "2"
+tauri = { version = "2", features = [] }
 tauri-plugin-single-instance = "2"
 tokio = { version = "1", features = ["time", "sync"] }
 tokio-util = "0.7"
