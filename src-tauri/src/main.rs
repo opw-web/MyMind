@@ -643,6 +643,23 @@ fn profile(app: &tauri::App) -> Result<PathBuf> {
     Ok(app.path().app_local_data_dir()?.join("planner"))
 }
 
+/// Tauri returns verbatim (`\\?\`) paths from resource_dir on Windows, which
+/// ctranslate2 cannot open; speech models need a regular path.
+#[cfg(windows)]
+fn regular_path(path: PathBuf) -> PathBuf {
+    let text = path.to_string_lossy();
+    PathBuf::from(
+        text.strip_prefix("\\\\?\\")
+            .unwrap_or(text.as_ref())
+            .to_owned(),
+    )
+}
+
+#[cfg(not(windows))]
+fn regular_path(path: PathBuf) -> PathBuf {
+    path
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
@@ -674,7 +691,7 @@ fn main() {
                 .as_str()
                 .map(str::to_owned);
             let dictation = DictationDrafts::open(&profile.join("dictation.sqlite"))?;
-            let resources = app.path().resource_dir()?.join("speech");
+            let resources = regular_path(app.path().resource_dir()?.join("speech"));
             let speech = SpeechRuntime::new(resources)?;
             let handle = app.handle().clone();
             let model = Arc::new(ModelRuntime::new(&profile, move |status| {
