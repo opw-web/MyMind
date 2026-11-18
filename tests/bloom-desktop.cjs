@@ -1,154 +1,319 @@
-// Bloom UI regression: real Electron and SQLite, no local model. Covers shell, calendar, tasks, composer, dialogs and layout.
-const {_electron:electron}=require('playwright');
-const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const root=path.resolve(__dirname,'..');
-const out=process.env.MYMIND_BLOOM_EVIDENCE||path.join(root,'test-results',`bloom-${Date.now()}`);
-const dataDir=path.join(out,`data-${Date.now()}`),env={...process.env,MYMIND_DATA_DIR:dataDir,MYMIND_TEST_MODE:'1',MYMIND_SKIP_OLLAMA:'1'};delete env.ELECTRON_RUN_AS_NODE;
-fs.mkdirSync(out,{recursive:true});
-let app,page;const errors=[],checks=[];
-const snap=()=>page.evaluate(()=>window.planner.snapshot());
-const button=name=>page.getByRole('button',{name,exact:true});
-const size=(w,h)=>app.evaluate(({BrowserWindow},[w,h])=>BrowserWindow.getAllWindows()[0].setSize(w,h),[w,h]);
-const noOverflow=()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.body.scrollHeight<=innerHeight+1);
-async function check(name,run){try{await run();}catch(e){await shot('fail-'+name.slice(0,20).replace(/W+/g,'-')).catch(()=>{});throw e;}checks.push(name);console.log('PASS '+name);}
-async function shot(name){await page.screenshot({path:path.join(out,name+'.png')});}
-async function seed(changes){const s=await snap();await page.evaluate(([revision,changes])=>window.planner.mutate({changes,label:'seed',expectedRevision:revision,requestId:crypto.randomUUID()}),[s.revision,changes]);await page.waitForTimeout(400);}
-(async()=>{try{
-  app=await electron.launch({executablePath:process.env.MYMIND_TEST_EXECUTABLE||require('electron'),args:['--force-device-scale-factor=1',...(process.env.MYMIND_TEST_EXECUTABLE?[]:[root])],env});
-  page=await app.firstWindow();
-  await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];const timer=setInterval(()=>{if(!w.isDestroyed())void w.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true}).catch(()=>{});},150);timer.unref();});
-  page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
-  page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-  await size(1280,800);await page.getByTestId('calendar').waitFor();
-  const today=await page.evaluate(()=>window.planner.snapshot().then(s=>new Intl.DateTimeFormat('en-CA',{timeZone:s.preferences.timezone}).format(new Date())));
-  const categoryId=(await snap()).categories[0]?.id;
-  await seed([
-    {action:'create',entity:'event',fields:{title:'Team sync',startDate:today,endDate:today,startTime:'10:00',endTime:'11:00',notes:'',color:'lavender'}},
-    {action:'create',entity:'event',fields:{title:'Deep work',startDate:today,endDate:today,startTime:'10:30',endTime:'12:00',notes:'',color:'sage',...(categoryId?{categoryId}:{})}},
-    {action:'create',entity:'event',fields:{title:'Conference trip',startDate:today,endDate:today,notes:'',color:'coral'}},
-    {action:'create',entity:'task',fields:{title:'Write proposal',notes:'',projectId:'inbox',dueDate:today,steps:[{id:crypto.randomUUID(),title:'Outline',completed:false},{id:crypto.randomUUID(),title:'Draft',completed:false}]}}
-  ]);
+// Manual Bloom interaction coverage against Electron IPC and real local storage.
+const {_electron: electron} = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
-  await check('Shell shows Bloom sidebar and Calendar is current',async()=>{
-    assert.equal(await button('Calendar view').getAttribute('aria-current'),'page');
-    assert.equal(await button('Tasks view').getAttribute('aria-current'),null);
-    assert.ok(await page.locator('.sidebar').isVisible());
-    assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor!==''&&getComputedStyle(document.querySelector('.app-shell')).backgroundColor),'rgb(255, 248, 240)');
-    assert.ok((await page.evaluate(()=>getComputedStyle(document.querySelector('.title-wrap h1')).fontFamily)).includes('Bloom Pixel'));
-  });
+const root = path.resolve(__dirname, '..');
+const output = process.env.MYMIND_BLOOM_EVIDENCE;
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mymind-bloom-manual-'));
+const env = {...process.env, MYMIND_DATA_DIR: dataDir, MYMIND_TEST_MODE: '1', MYMIND_SKIP_OLLAMA: '1'};
+delete env.ELECTRON_RUN_AS_NODE;
 
-  await check('Hour grid starts at today with seven readable days',async()=>{
-    await page.locator('.day-header.is-today').waitFor();
-    const left=await page.locator('.day-header.is-today').evaluate(e=>e.getBoundingClientRect().left),gutter=await page.locator('.corner-label').evaluate(e=>e.getBoundingClientRect().right);
-    assert.ok(Math.abs(left-gutter)<=2,'today is the leftmost day');
-    const widths=await page.locator('.day-header').evaluateAll(n=>n.slice(0,7).map(e=>Math.round(e.getBoundingClientRect().width)));
-    assert.ok(widths.every(w=>w>=148));
-    assert.ok(await page.locator('.weekday').first().isVisible());
-    assert.match(await page.getByTestId('calendar-year').innerText(),/\d{4}/);
-  });
+let app;
+let page;
+const errors = [];
+const button = (name, within = page) => within.getByRole('button', {name, exact: true});
+const dialog = name => page.getByRole('dialog', {name, exact: true});
+const snapshot = () => page.evaluate(() => window.planner.snapshot());
+const taskRow = title => page.locator('[data-task-id]').filter({has: button(title)});
+const timed = (date, title) => page.locator(`.time-column[data-date="${date}"] .event-block`, {hasText: title});
+const allDay = (date, title) => page.locator(`.all-day-cell[data-date="${date}"] .all-day-chip`, {hasText: title});
+const dateOffset = (date, days) => new Date(Date.parse(`${date}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
 
-  await check('Timed events share columns, all-day events sit in the all-day row',async()=>{
-    const sync=page.locator('.event-block',{hasText:'Team sync'}),deep=page.locator('.event-block',{hasText:'Deep work'});
-    await sync.waitFor();await deep.waitFor();
-    const a=await sync.boundingBox(),b=await deep.boundingBox();
-    assert.ok(a.x+a.width<=b.x+1||b.x+b.width<=a.x+1,'overlapping events sit side by side');
-    assert.ok(await page.locator('.all-day-cell .event-card',{hasText:'Conference trip'}).isVisible());
-    assert.ok(await page.locator('.now-line').count()>=1);
-  });
+async function size(width, height) {
+  await app.evaluate(({BrowserWindow}, [w, h]) => BrowserWindow.getAllWindows()[0].setContentSize(w, h), [width, height]);
+}
 
-  await check('Standalone events omit completion; linked work uses its task completion',async()=>{
-    assert.equal(await button('Complete Team sync in calendar').count(),0);
-    const task=(await snap()).tasks.find(t=>t.title==='Write proposal');
-    await seed([{action:'update',entity:'event',id:(await snap()).events.find(e=>e.title==='Team sync').id,fields:{linkedTaskId:task.id}}]);
-    await page.locator('.event-block',{hasText:'Team sync'}).hover();await button('Complete Team sync in calendar').click();
-    await page.waitForFunction(()=>window.planner.snapshot().then(s=>s.tasks.find(t=>t.title==='Write proposal').completed));
-    await button('Reopen Team sync in calendar').click();
-  });
+async function check(name, action) {
+  await action();
+  console.log(`PASS ${name}`);
+}
 
-  await check('New event dialog saves to the planner',async()=>{
-    await button('New event').click();
-    const dialog=page.getByRole('dialog');await dialog.getByLabel('Title').fill('Bloom lunch');await dialog.getByRole('button',{name:'Add event'}).click();
-    await page.waitForFunction(()=>window.planner.snapshot().then(s=>s.events.some(e=>e.title==='Bloom lunch')));
-  });
+async function seed(changes) {
+  await page.evaluate(async changes => {
+    const {revision} = await window.planner.snapshot();
+    await window.planner.mutate({changes, expectedRevision: revision, label: 'Test fixtures', requestId: crypto.randomUUID()});
+  }, changes);
+}
 
-  await check('Dragging across a day column opens a timed event',async()=>{
-    await button('Today').click();await page.waitForTimeout(900);await page.locator('.calendar-panel').evaluate(e=>{e.scrollTop=800;});
-    const column=page.locator('.time-column.time-today'),box=await column.boundingBox();
-    const y=await page.evaluate(()=>document.querySelector('.time-column.time-today').getBoundingClientRect().top);
-    await page.mouse.move(box.x+box.width/2,y+14*66+5);await page.mouse.down();await page.mouse.move(box.x+box.width/2,y+15*66+5,{steps:6});await page.mouse.up();
-    const dialog=page.getByRole('dialog');await dialog.waitFor();
-    assert.equal(await dialog.getByLabel('Start time').inputValue(),'14:00');
-    await dialog.getByRole('button',{name:'Close editor'}).click();
-  });
+async function submit(name, modal) {
+  await button(name, modal).click();
+  await modal.waitFor({state: 'hidden'});
+}
 
-  await check('Calendars popover hides a category from the grid',async()=>{
-    if(!categoryId)return;
-    await button('Calendars').click();
-    const popover=page.locator('.category-popover');await popover.waitFor();
-    const name=(await snap()).categories[0].title;
-    await popover.getByRole('checkbox').first().uncheck();
-    await page.locator('.event-block',{hasText:'Deep work'}).waitFor({state:'detached'});
-    await popover.getByRole('checkbox').first().check();
-    await page.locator('.event-block',{hasText:'Deep work'}).waitFor();
-    await page.keyboard.press('Escape');await popover.waitFor({state:'detached'});
-    assert.ok(name);
-  });
+async function scrollGrid(top) {
+  await page.getByTestId('calendar-scroller').evaluate((element, y) => {element.scrollTop = y;}, top);
+}
 
-  await check('Day header opens the agenda dialog',async()=>{
-    await page.locator('.day-header.is-today').click();
-    const dialog=page.getByRole('dialog');await dialog.getByText('Team sync').waitFor();
-    await dialog.getByRole('button',{name:'Close agenda'}).click();
-  });
+async function leadingDate(date) {
+  await page.waitForFunction(date => {
+    const gutter = document.querySelector('.corner-label').getBoundingClientRect();
+    const days = [...document.querySelectorAll('.day-header')];
+    return days.some(day => day.dataset.date === date && Math.abs(day.getBoundingClientRect().left - gutter.right) <= 2);
+  }, date);
+}
 
-  await check('Tasks screen shows project panels, steps and completion',async()=>{
-    await button('Tasks view').click();
-    await page.locator('.task-title-button',{hasText:'Write proposal'}).waitFor();
-    assert.ok(await page.locator('.project-panel').first().isVisible());
-    await page.getByLabel('Complete step Outline').filter({visible:true}).check();
-    await page.waitForFunction(()=>window.planner.snapshot().then(s=>s.tasks.find(t=>t.title==='Write proposal').steps[0].completed));
-    await button('Complete Write proposal').click();
-    await page.waitForFunction(()=>window.planner.snapshot().then(s=>s.tasks.find(t=>t.title==='Write proposal').completed));
-    await button('Archived').click();await button('All').click();
-    assert.ok((await page.locator('.mini-progress').count())>=1);
-  });
+async function screenshot(name) {
+  if (!output) return;
+  fs.mkdirSync(output, {recursive: true});
+  await page.screenshot({path: path.join(output, name + '.png')});
+}
 
-  await check('New task dialog and flowchart toggle work',async()=>{
-    await button('New task').click();
-    const dialog=page.getByRole('dialog');await dialog.getByLabel('Title').fill('Plan trip');await dialog.getByRole('button',{name:'Add task'}).click();
-    await page.waitForFunction(()=>window.planner.snapshot().then(s=>s.tasks.some(t=>t.title==='Plan trip')));
-    await button('Flowchart').click();await page.getByLabel('Task flowchart',{exact:true}).waitFor();
-    await button('Checklist').click();
-  });
+(async () => {
+  try {
+    app = await electron.launch({
+      executablePath: process.env.MYMIND_TEST_EXECUTABLE || require('electron'),
+      args: ['--force-device-scale-factor=1', ...(process.env.MYMIND_TEST_EXECUTABLE ? [] : [root])],
+      env,
+    });
+    page = await app.firstWindow();
+    await app.evaluate(({BrowserWindow}) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      const keepFrames = setInterval(() => {
+        if (!window.isDestroyed()) void window.webContents.capturePage(undefined, {stayHidden: true, stayAwake: true}).catch(() => {});
+      }, 150);
+      keepFrames.unref();
+    });
+    page.setDefaultTimeout(15_000);
+    page.on('pageerror', error => errors.push(error.message));
+    await size(1280, 800);
+    await page.getByTestId('calendar-scroller').waitFor();
+    const today = await page.evaluate(async () => {
+      const {preferences} = await window.planner.snapshot();
+      return new Intl.DateTimeFormat('en-CA', {timeZone: preferences.timezone}).format(new Date());
+    });
+    const categoryId = (await snapshot()).categories[0].id;
+    const projectId = 'manual-project';
+    const overnightId = 'manual-overnight';
+    await seed([
+      {action: 'create', entity: 'project', id: projectId, fields: {title: 'Portfolio Refresh'}},
+      {action: 'create', entity: 'event', fields: {title: 'Retrospective notes', kind: 'actual', startDate: today, startTime: '10:00', endTime: '11:00', categoryId}},
+      {action: 'create', entity: 'event', fields: {title: 'Team sync', startDate: today, startTime: '10:30', endTime: '12:00'}},
+      {action: 'create', entity: 'event', id: overnightId, fields: {title: 'Legacy overnight', kind: 'actual', textBox: 'Historical context',
+        startDate: today, endDate: dateOffset(today, 1), startTime: '22:00', endTime: '01:00'}},
+    ]);
 
-  await check('Composer opens a conversation sheet and keeps the planner reachable',async()=>{
-    assert.ok(await page.getByLabel('Message local assistant').isVisible());
-    await button('Show conversation').click();
-    const sheet=page.locator('.chat-sheet');await sheet.waitFor();
-    assert.ok(await sheet.getByText('TRY A COMMAND').isVisible());
-    await sheet.getByRole('button',{name:'What do I need to do today?'}).click();
-    assert.equal(await page.getByLabel('Message local assistant').inputValue(),'What do I need to do today?');
-    await button('Hide conversation').first().click();await sheet.waitFor({state:'detached'});
-    await page.getByLabel('Message local assistant').fill('');
-  });
+    await check('Calendar leads with today and continuous days keep the two-tab shell', async () => {
+      const navigation = page.getByRole('navigation', {name: 'Main navigation'});
+      assert.equal(await navigation.getByRole('button').count(), 2);
+      assert.equal(await button('Calendar', navigation).getAttribute('aria-current'), 'page');
+      await leadingDate(today);
+      await button('Next seven days').click();
+      await leadingDate(dateOffset(today, 7));
+      await button('Today').click();
+      await leadingDate(today);
+      await button('Previous seven days').click();
+      await leadingDate(dateOffset(today, -7));
+      await scrollGrid(8 * 66);
+      await button('Tasks', navigation).click();
+      await page.getByRole('heading', {name: 'My tasks'}).waitFor();
+      await button('Calendar', navigation).click();
+      await leadingDate(dateOffset(today, -7));
+      assert.equal(await page.getByTestId('calendar-scroller').evaluate(element => element.scrollTop), 8 * 66);
+      await button('Today').click();
+      await leadingDate(today);
+      const panel = page.getByTestId('calendar-scroller');
+      const dayWidth = await page.locator('.day-header.is-today').evaluate(element => element.getBoundingClientRect().width);
+      await panel.hover({position: {x: 120, y: 220}});
+      await page.mouse.wheel(dayWidth * 2, 0);
+      await leadingDate(dateOffset(today, 2));
+      await button('Today').click();
+      await leadingDate(today);
+      await scrollGrid(7 * 66);
+      assert.equal(await page.getByRole('button', {name: 'Actual', exact: true}).count(), 0);
+      await screenshot('calendar');
+    });
 
-  await check('Settings open as a dialog',async()=>{
-    await button('Assistant settings').click();
-    const dialog=page.getByRole('dialog');await dialog.getByLabel('Ollama model').waitFor();
-    await shot('settings');
-    await button('Close settings').click();await dialog.waitFor({state:'detached'});
-  });
+    await check('Clicking a half-hour slot opens a one-hour editor and validates the range', async () => {
+      await scrollGrid(7 * 66);
+      const column = page.locator(`.time-column[data-date="${today}"]`);
+      const {x, y} = await column.evaluate(element => {
+        const box = element.getBoundingClientRect();
+        return {x: box.left + 20, y: box.top + 9.5 * 66 + 6};
+      });
+      await page.mouse.click(x, y);
+      const modal = dialog('New calendar block');
+      assert.equal(await modal.getByLabel('Start time').inputValue(), '09:30');
+      assert.equal(await modal.getByLabel('End time').inputValue(), '10:30');
+      await modal.getByLabel('Title').fill('Manual focus block');
+      await modal.getByLabel('End time').fill('09:00');
+      await button('Add block', modal).click();
+      assert.equal(await modal.getByRole('alert').innerText(), 'End time must be after start time');
+      await modal.getByLabel('End time').fill('10:30');
+      await submit('Add block', modal);
+      await timed(today, 'Manual focus block').waitFor();
+    });
 
-  await check('No horizontal overflow and reachable composer at common sizes',async()=>{
-    for(const view of ['Calendar view','Tasks view'])for(const [w,h] of [[1440,900],[1280,800],[1000,650],[800,600]]){
-      await button(view).click();await size(w,h);await page.waitForTimeout(250);
-      assert.equal(await noOverflow(),true,`${view} overflows at ${w}x${h}`);
-      const rect=await page.getByLabel('Message local assistant').evaluate(e=>e.getBoundingClientRect().toJSON());
-      assert.ok(rect.bottom<=h&&rect.top>=0,`composer reachable at ${w}x${h}`);
-    }
-    await size(1280,800);await button('Calendar view').click();await shot('calendar-final');
-  });
+    await check('Dragging across empty slots and clicking the all-day lane prefill the editor', async () => {
+      await scrollGrid(7 * 66);
+      const column = page.locator(`.time-column[data-date="${today}"]`);
+      const points = await column.evaluate(element => {
+        const box = element.getBoundingClientRect();
+        return {x: box.left + 20, first: box.top + 8 * 66 + 6, last: box.top + 9 * 66 + 6};
+      });
+      await page.mouse.move(points.x, points.first);
+      await page.mouse.down();
+      await page.mouse.move(points.x, points.last, {steps: 5});
+      await page.mouse.up();
+      const modal = dialog('New calendar block');
+      assert.equal(await modal.getByLabel('Start time').inputValue(), '08:00');
+      assert.equal(await modal.getByLabel('End time').inputValue(), '09:30');
+      await page.keyboard.press('Escape');
+      await modal.waitFor({state: 'hidden'});
+      await page.locator(`.all-day-cell[data-date="${today}"]`).click({position: {x: 10, y: 10}});
+      assert.ok(await modal.getByLabel('All-day block').isChecked());
+      assert.equal(await modal.getByLabel('Start time').count(), 0);
+      await modal.getByLabel('Title').fill('All-day workshop');
+      await submit('Add block', modal);
+      await allDay(today, 'All-day workshop').waitFor();
+      await allDay(today, 'All-day workshop').click();
+      await submit('Delete', dialog('Edit calendar block'));
+      await allDay(today, 'All-day workshop').waitFor({state: 'detached'});
+    });
 
-  assert.deepEqual(errors.filter(e=>!/ResizeObserver|Autofill/.test(e)),[]);
-  fs.writeFileSync(path.join(out,'bloom-report.json'),JSON.stringify({passed:true,checks},null,2));
-  console.log(JSON.stringify({passed:true,checks:checks.length}));
-}finally{await app?.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
+    await check('Categories filter, restore, add and rename within the single calendar', async () => {
+      const first = (await snapshot()).categories.find(category => category.id === categoryId);
+      const categories = page.getByRole('button', {name: /^Categories/});
+      await categories.click();
+      await page.getByRole('checkbox', {name: 'Show ' + first.title, exact: true}).uncheck();
+      await timed(today, 'Retrospective notes').waitFor({state: 'detached'});
+      await timed(today, 'Team sync').waitFor();
+      await button('Show all').click();
+      await timed(today, 'Retrospective notes').waitFor();
+      await page.getByRole('textbox', {name: 'New category name'}).fill('Client work');
+      await page.getByRole('textbox', {name: 'New category name'}).press('Enter');
+      await button('Rename category: Client work').click();
+      await page.getByRole('textbox', {name: 'Category name', exact: true}).fill('Client projects');
+      await button('Save name').click();
+      await page.getByRole('checkbox', {name: 'Show Client projects', exact: true}).waitFor();
+      await page.keyboard.press('Escape');
+      assert.equal(await categories.getAttribute('aria-expanded'), 'false');
+    });
+
+    let taskId;
+    await check('Project, task metadata, and checklist edits share existing task persistence', async () => {
+      await button('Tasks').click();
+      await button('New project').click();
+      const project = dialog('New project');
+      await project.getByLabel('Project name').fill('Weekly planning');
+      await submit('Create project', project);
+      await button('Add task to Portfolio Refresh').click();
+      const task = dialog('Create a task');
+      await task.getByLabel('Task name').fill('Write proposal');
+      assert.equal(await task.getByLabel('Project', {exact: true}).inputValue(), projectId);
+      await task.getByLabel('Due date').fill(today);
+      await task.getByLabel('Priority').selectOption('High');
+      await task.getByLabel('Estimate').fill('1h 30m');
+      await button('Add checklist step', task).click();
+      await task.getByRole('textbox', {name: 'Step 1', exact: true}).fill('Write outline');
+      await submit('Add task', task);
+      const stored = (await snapshot()).tasks.find(task => task.title === 'Write proposal');
+      taskId = stored.id;
+      assert.equal(stored.priority, 'High');
+      assert.equal(stored.estimate, '1h 30m');
+      assert.equal(stored.steps.length, 1);
+      await taskRow('Write proposal').getByRole('button', {name: 'Show checklist steps'}).click();
+      await taskRow('Write proposal').getByRole('checkbox', {name: 'Mark Write outline'}).click();
+      await page.waitForFunction(id => window.planner.snapshot().then(s => s.tasks.find(t => t.id === id).steps[0].completed), taskId);
+      assert.equal((await snapshot()).tasks.find(t => t.id === taskId).completed, false);
+      await button('Scheduled').click();
+      await taskRow('Write proposal').waitFor({state: 'detached'});
+      await button('Unscheduled').click();
+      await taskRow('Write proposal').waitFor();
+    });
+
+    await check('Scheduling twice links two sessions and renaming the task updates both labels', async () => {
+      for (const startTime of ['09:00', '11:00']) {
+        await taskRow('Write proposal').getByRole('button', {name: 'Schedule on calendar'}).click();
+        const modal = dialog('New calendar block');
+        assert.equal(await modal.getByLabel('Linked task (optional)').inputValue(), taskId);
+        assert.equal(await modal.getByLabel('Date', {exact: true}).inputValue(), today);
+        await modal.getByLabel('Start time').fill(startTime);
+        await modal.getByLabel('End time').fill(startTime === '09:00' ? '10:00' : '12:00');
+        await submit('Add block', modal);
+        if (startTime === '09:00') {
+          await taskRow('Write proposal').waitFor({state: 'detached'});
+          await button('Scheduled').click();
+        }
+      }
+      assert.equal((await snapshot()).events.filter(event => event.linkedTaskId === taskId).length, 2);
+      await button('Calendar').click();
+      await leadingDate(today);
+      await timed(today, 'Write proposal').first().click();
+      await button('Open linked task: Write proposal', dialog('Edit calendar block')).click();
+      const modal = dialog('Edit task');
+      await modal.getByLabel('Task name').fill('Polish proposal');
+      await submit('Save changes', modal);
+      await button('Calendar').click();
+      assert.equal(await timed(today, 'Polish proposal').count(), 2);
+    });
+
+    await check('Project deletion rehomes tasks, and deleting a task preserves linked blocks', async () => {
+      await button('Tasks').click();
+      await button('Portfolio Refresh').click();
+      await submit('Remove project', dialog('Rename project'));
+      const standalone = page.locator('.standalone-panel').locator('[data-task-id]').filter({hasText: 'Polish proposal'});
+      await standalone.waitFor();
+      await standalone.getByRole('checkbox', {name: 'Mark Polish proposal complete'}).click();
+      await standalone.waitFor({state: 'detached'});
+      await button('Completed').click();
+      await standalone.waitFor();
+      await button('Polish proposal', standalone).click();
+      await submit('Delete task', dialog('Edit task'));
+      const state = await snapshot();
+      assert.equal(state.tasks.find(task => task.id === taskId), undefined);
+      assert.equal(state.events.filter(event => event.title === 'Write proposal' && event.linkedTaskId === null).length, 2);
+      await screenshot('tasks');
+    });
+
+    await check('Editing a legacy overnight block preserves timing and hidden legacy fields', async () => {
+      await button('Calendar').click();
+      await page.locator(`.time-column[data-date="${today}"] [data-event-id="${overnightId}"]`).click();
+      const modal = dialog('Edit calendar block');
+      assert.equal(await modal.getByLabel('Start time').inputValue(), '22:00');
+      assert.equal(await modal.getByLabel('End time').inputValue(), '01:00');
+      await modal.getByLabel('Notes').fill('Edited notes');
+      await submit('Save changes', modal);
+      const event = (await snapshot()).events.find(event => event.id === overnightId);
+      assert.equal(event.notes, 'Edited notes');
+      assert.equal(event.endDate, dateOffset(today, 1));
+      assert.equal(event.kind, 'actual');
+      assert.equal(event.textBox, 'Historical context');
+    });
+
+    await check('Close, backdrop and Cancel discard edits at narrow sizes', async () => {
+      await size(720, 650);
+      for (const close of ['Close dialog', 'Cancel', 'backdrop']) {
+        await button('New block').click();
+        const modal = dialog('New calendar block');
+        await modal.getByLabel('Title').fill('Discarded title');
+        if (close === 'backdrop') await page.mouse.click(4, 4);
+        else await button(close, modal).click();
+        await modal.waitFor({state: 'hidden'});
+      }
+      assert.ok(!(await snapshot()).events.some(event => event.title === 'Discarded title'));
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.body.scrollHeight <= innerHeight + 1));
+      await screenshot('narrow-calendar');
+
+      await size(390, 844);
+      await scrollGrid(7 * 66);
+      const newBlock = await button('New block').boundingBox();
+      const heading = await page.locator('.screen-content:not([hidden]) .topbar h1').boundingBox();
+      assert.ok(newBlock.x + newBlock.width <= 390 && heading.y < newBlock.y + newBlock.height && newBlock.y < heading.y + heading.height);
+      assert.ok(await button('Today').isVisible());
+      assert.ok(await page.getByRole('button', {name: /^Categories/}).isVisible());
+      assert.equal(await page.locator('.single-calendar-note').isVisible(), false);
+      await screenshot('mobile-calendar');
+    });
+
+    assert.deepEqual(errors, [], 'No uncaught renderer exceptions');
+  } catch (error) {
+    await screenshot('error').catch(() => {});
+    throw error;
+  } finally {
+    await app?.close();
+    fs.rmSync(dataDir, {recursive: true, force: true});
+  }
+})().catch(error => {console.error(error); process.exitCode = 1;});

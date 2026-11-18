@@ -45,6 +45,7 @@ export async function installTauriBridge() {
     snapshot: () => call('snapshot'),
     mutate: input => call('mutate', input),
     undo: expectedRevision => call('undo', expectedRevision),
+    undoAction: input => call('undoAction', input),
     organizePreview: () => call('organizePreview'),
     preferences: input => call('preferences', input),
     getDraft: () => call('getDraft'),
@@ -55,6 +56,7 @@ export async function installTauriBridge() {
       if (event.type === 'draftchange') callback(event.draft);
     }),
     chat: input => call('chat', input),
+    chatHistory: () => call('chatHistory'),
     checkChatInput: input => call('checkChatInput', input),
     cancelChat: () => call('cancelChat'),
     newChat: () => call('newChat'),

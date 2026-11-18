@@ -2,20 +2,23 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync,existsSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { ApplyDraftInput, Change, DraftItem, Entity, EventItem, Mutation, Preferences, Receipt, Section, Snapshot, Task } from '../shared/model';
+import { ApplyDraftInput, AssistantViewAction, Change, ChatInput, ChatResult, DraftItem, Entity, EventItem, Mutation, Preferences, Receipt, Section, Snapshot, Task, UndoActionInput } from '../shared/model';
 import { categoryFields,eventFields, mutationSchema, preferenceSchema, projectFields, sectionFields, taskFields } from '../shared/validation';
 import {categorizeChanges,inferCategory,normalizeCategory} from './categories';
 import { todayIn, daysBetween, shiftDate, shortDate } from '../shared/dates';
 import {calendarCompletionChanges,eventCompletion} from '../shared/calendar';
 import {validateTaskGraph} from '../shared/tasks';
+import {ActionJournal, actionCollections, actionEffects} from './action-journal';
 
 const tables: Record<Entity, string> = { event: 'events', task: 'tasks', project: 'projects', section: 'sections',category:'categories' };
 export interface UndoToken { readonly kind:'trusted-undo'; }
 export interface RestoreToken { readonly kind:'trusted-restore'; }
 export interface CompiledBatch { readonly changes:Change[]; readonly projectedSnapshot:Snapshot; readonly descriptions:string[]; readonly items:DraftItem[]; }
 type SavedState = Pick<Snapshot, 'events' | 'tasks' | 'projects' | 'sections'|'categories'>;
+export interface AppliedChat {chatRequestId:string;content:string;viewActions?:AssistantViewAction[];}
 export class PlannerDatabase {
   readonly db: DatabaseSync;
+  private readonly chatJournal:ActionJournal;
   private previewClock?:Date;
   private undoTokens=new WeakMap<UndoToken,{id:number;revision:number;state:SavedState;label:string}>();
   private restoreTokens=new WeakMap<RestoreToken,{entity:'task'|'event';record:Record<string,unknown>}>();
@@ -23,9 +26,9 @@ export class PlannerDatabase {
   constructor(path: string,private readonly now:()=>Date=()=>new Date()) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
-    this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=3000;');
+    this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=3000; PRAGMA secure_delete=ON;');
     const version = (this.db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
-    if (version > 9) throw new Error('This planner database needs a newer version of MYMIND.');
+    if (version > 10) throw new Error('This planner database needs a newer version of MYMIND.');
     if (version === 0) {
       this.db.exec(`BEGIN;
         CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -159,6 +162,16 @@ export class PlannerDatabase {
         this.db.exec('PRAGMA user_version=9; COMMIT');
       }catch(error){this.db.exec('ROLLBACK');throw error;}
     }
+    if(version<10){
+      if(version>0&&path!==':memory:'&&!existsSync(`${path}.v9-backup`))this.db.prepare('VACUUM INTO ?').run(`${path}.v9-backup`);
+      this.db.exec('BEGIN IMMEDIATE');
+      try{
+        ActionJournal.migrate(this.db);
+        for(const task of this.rows<Task>('task'))this.put('task',{...task});
+        this.db.exec('PRAGMA user_version=10; COMMIT');
+      }catch(error){this.db.exec('ROLLBACK');throw error;}
+    }
+    this.chatJournal=new ActionJournal(this.db);
   }
   private meta(key: string): string { return (this.db.prepare('SELECT value FROM meta WHERE key=?').get(key) as { value: string }).value; }
   private setMeta(key: string, value: string): void { this.db.prepare('INSERT INTO meta VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key, value); }
@@ -169,13 +182,16 @@ export class PlannerDatabase {
     return { revision: this.revision, events: this.rows<EventItem>('event').map(event=>({...event,completed:eventCompletion(event,tasks)??false})), tasks, projects: this.rows<Snapshot['projects'][number]>('project').sort((a,b) => a.order-b.order), sections: this.rows<Section>('section').sort((a,b) => a.order-b.order),categories:this.rows('category'), preferences: {appearance:'light',...JSON.parse(this.meta('preferences'))}, canUndo: !!this.db.prepare('SELECT id FROM history LIMIT 1').get() };
   }
   private savedState(): SavedState { const { events, tasks, projects, sections,categories } = this.snapshot(); return { events, tasks, projects, sections,categories }; }
+  private actionState():SavedState {
+    return {events:this.rows('event'),tasks:this.rows('task'),projects:this.rows('project'),sections:this.rows('section'),categories:this.rows('category')};
+  }
   private get(entity: Entity, id: string): Record<string, unknown> {
     const row = this.db.prepare(`SELECT body FROM ${tables[entity]} WHERE id=?`).get(id);
     if (!row) throw new Error(`That ${entity} no longer exists. Refresh and try again.`);
     return JSON.parse(row.body as string);
   }
   private put(entity: Entity, value: Record<string, unknown>): void {
-    if(entity==='task')value={createdAt:null,completedAt:null,steps:[],dependsOnIds:[],...value};
+    if(entity==='task')value={createdAt:null,completedAt:null,priority:'',estimate:'',steps:[],dependsOnIds:[],...value};
     if(entity==='event')value={kind:'planned',linkedStepId:null,completed:false,linkedTaskId:null,...value};
     if(entity==='task'&&value.scheduledDate===undefined)value={...value,scheduledDate:null};
     if(entity==='task'||entity==='event')value={categoryId:null,colorOverride:value.color,...value};
@@ -342,12 +358,12 @@ export class PlannerDatabase {
   previewBatch(input:{expectedRevision:number;changes:Change[];undo?:UndoToken;restores?:RestoreToken[];clock?:Date}):CompiledBatch {
     if(input.expectedRevision!==this.revision)throw new Error('Your planner changed. Re-preview this draft before Apply.');
     const undo=input.undo?this.validatedUndo(input.undo):undefined;
-    const before=this.savedState(),priorClock=this.previewClock;this.previewClock=input.clock??this.now();this.db.exec('BEGIN');
+    const before=this.actionState(),priorClock=this.previewClock;this.previewClock=input.clock??this.now();this.db.exec('BEGIN');
     try{
       if(undo)this.replaceSavedState(undo.state);
       for(const token of input.restores??[]){const restore=this.restoreTokens.get(token);if(!restore)throw new Error('Untrusted restoration.');this.put(restore.entity,structuredClone(restore.record));}
       const result=this.apply(categorizeChanges(this.snapshot(),input.changes));
-      const state=this.savedState(),items:DraftItem[]=[];
+      const state=this.actionState(),items:DraftItem[]=[];
       for(const entity of Object.keys(tables) as Entity[]){const name=entity==='category'?'categories':`${entity}s`;const previous=before[name as keyof SavedState] as unknown as Record<string,unknown>[],next=state[name as keyof SavedState] as unknown as Record<string,unknown>[];
         for(const id of new Set([...previous,...next].map(item=>String(item.id)))){const a=previous.find(item=>item.id===id),b=next.find(item=>item.id===id);if(JSON.stringify(a)===JSON.stringify(b))continue;items.push({entity,id,title:String(b?.title??a?.title??'Item'),action:!b?'delete':!a?(undo||input.restores?.length?'restore':'create'):'update',...(a?{before:structuredClone(a)}:{}),...(b?{after:structuredClone(b)}:{})});}
       }
@@ -361,19 +377,29 @@ export class PlannerDatabase {
     const saved=this.receipt(`draft:${input.draftId}:${input.version}`);
     if(saved&&saved.draft?.baseRevision!==input.expectedRevision)throw new Error('That Apply retry does not match the accepted draft revision.');return saved;
   }
-  applyBatch(batch:CompiledBatch,input:ApplyDraftInput):Receipt {
+  applyBatch(batch:CompiledBatch,input:ApplyDraftInput,chat?:AppliedChat):Receipt {
     this.db.exec('BEGIN IMMEDIATE');
     try{
+      const completed=chat&&this.chatJournal.result(chat.chatRequestId);
+      if(completed){
+        if(!completed.receipt)throw new Error('This chat request is already finished.');
+        this.db.exec('COMMIT');return completed.receipt;
+      }
       const existing=this.draftReceipt(input);if(existing){this.db.exec('COMMIT');return existing;}
       const compiled=this.compiled.get(batch);if(!compiled)throw new Error('Untrusted draft state.');
       if(compiled.revision!==input.expectedRevision||this.revision!==input.expectedRevision)throw new Error('Your planner changed. Re-preview this draft before Apply.');
       if(compiled.undo)this.validatedUndo(compiled.undo);
-      const before=this.savedState();this.replaceSavedState(compiled.state);
+      const before=this.actionState();this.replaceSavedState(compiled.state);
       const revision=this.revision+1;this.setMeta('revision',String(revision));
       const receipt:Receipt={label:compiled.undo?'Assistant Undo and changes':'Assistant changes',revision,descriptions:compiled.descriptions,items:compiled.items.filter(item=>item.action!=='undo').map(item=>({id:item.id,entity:item.entity,action:item.action==='restore'?'create':item.action as Change['action'],title:item.title})),draft:{id:input.draftId,version:input.version,baseRevision:input.expectedRevision}};
       this.db.prepare('INSERT INTO history(label,before_state,descriptions) VALUES (?,?,?)').run(receipt.label,JSON.stringify(before),JSON.stringify(receipt.descriptions));
       this.db.exec('DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY id DESC LIMIT 50)');
       this.db.prepare('INSERT INTO requests VALUES (?,?)').run(`draft:${input.draftId}:${input.version}`,JSON.stringify(receipt));
+      const after=this.actionState();
+      if(chat){
+        receipt.actions=this.chatJournal.capture(chat.chatRequestId,before,after,revision);
+        this.chatJournal.finish(chat.chatRequestId,{content:chat.content,receipt,viewActions:chat.viewActions});
+      }else this.chatJournal.track(actionEffects(before,after),revision);
       this.db.exec('COMMIT');return receipt;
     }catch(error){this.db.exec('ROLLBACK');throw error;}
   }
@@ -398,12 +424,13 @@ export class PlannerDatabase {
     if (parsed.expectedRevision !== this.revision) throw new Error('Your planner changed. Please try again with the latest entries.');
     this.db.exec('BEGIN IMMEDIATE');
     try {
-      const before = this.savedState(), { descriptions,normalized } = this.apply(categorizeChanges(this.snapshot(),parsed.changes)), revision = this.revision + 1;
+      const before = this.actionState(), { descriptions,normalized } = this.apply(categorizeChanges(this.snapshot(),parsed.changes)), revision = this.revision + 1;
       this.setMeta('revision', String(revision));
       const receipt: Receipt = { label: parsed.label, descriptions, revision,items:normalized.map(change=>({id:change.id!,entity:change.entity,action:change.action,title:String(change.action==='delete'?(before[`${change.entity==='category'?'categorie':change.entity}s` as keyof SavedState] as {id:string;title:string}[]|undefined)?.find(item=>item.id===change.id)?.title??'Item':this.get(change.entity,change.id!).title)})) };
       this.db.prepare('INSERT INTO history(label,before_state,descriptions) VALUES (?,?,?)').run(parsed.label, JSON.stringify(before), JSON.stringify(descriptions));
       this.db.exec('DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY id DESC LIMIT 50)');
       this.db.prepare('INSERT INTO requests VALUES (?,?)').run(parsed.requestId, JSON.stringify(receipt));
+      this.chatJournal.track(actionEffects(before,this.actionState()),revision);
       this.db.exec('COMMIT'); return receipt;
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
@@ -415,13 +442,84 @@ export class PlannerDatabase {
     const state = JSON.parse(row.before_state as string) as SavedState;
     this.db.exec('BEGIN IMMEDIATE');
     try {
+      const before=this.actionState();
       this.replaceSavedState(state);
       this.db.prepare('DELETE FROM history WHERE id=?').run(row.id!);
       const revision = this.revision + 1; this.setMeta('revision', String(revision));
+      this.chatJournal.track(actionEffects(before,this.actionState()),revision);
       const receipt={ label: `Undid ${row.label}`, descriptions: [`Restored the planner before ${row.label}`], revision };
       if(requestId)this.db.prepare('INSERT INTO requests VALUES (?,?)').run(requestId,JSON.stringify(receipt));
       this.db.exec('COMMIT'); return receipt;
     } catch(error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+  beginChat(input:ChatInput){this.chatJournal.begin(input);}
+  chatResult(requestId:string){return this.chatJournal.result(requestId);}
+  finishChat(requestId:string,result:ChatResult){return this.chatJournal.finish(requestId,result);}
+  chatHistory(){return this.chatJournal.history();}
+  recoverChat(){this.chatJournal.recover();}
+  clearChat(){this.chatJournal.clear();this.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');}
+
+  seedBloomCategories():void {
+    if(this.revision!==0||this.rows('category').length)return;
+    const definitions=[['personal','Personal','rose'],['projects','Projects','lavender'],['career','Career Applications','amber'],
+      ['communication','Communication','sky'],['events','Events','coral'],['focus','Focus / Study','sage']] as const;
+    this.db.exec('BEGIN IMMEDIATE');
+    try{
+      for(const [id,title,color] of definitions)this.put('category',normalizeCategory({id,title,color}));
+      this.db.exec('COMMIT');
+    }catch(error){this.db.exec('ROLLBACK');throw error;}
+  }
+
+  undoAction({actionId}:UndoActionInput){
+    this.db.exec('BEGIN IMMEDIATE');
+    try{
+      const card=this.chatJournal.card(actionId);
+      if(card.receipt.undone){this.db.exec('COMMIT');return card.receipt;}
+      const before=this.actionState(),next=this.chatJournal.inverse(card,before);
+      const {target,action}=card.receipt;
+      if(action==='create'){
+        // Apply the established rehome/unlink policy to records added since the original action.
+        if(target.entity==='step'){
+          const task=next.tasks.find(item=>item.id===target.taskId)!;
+          this.apply([{entity:'task',id:task.id,action:'update',fields:{steps:task.steps}}]);
+        }else this.apply([{entity:target.entity,id:target.id,action:'delete'}]);
+      }else this.writeActionState(before,next);
+      const revision=this.revision+1;
+      this.setMeta('revision',String(revision));
+      const label=`Reversed ${card.receipt.title}`;
+      this.db.prepare('INSERT INTO history(label,before_state,descriptions) VALUES (?,?,?)').run(label,JSON.stringify(before),JSON.stringify([label]));
+      this.db.exec('DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY id DESC LIMIT 50)');
+      const receipt=this.chatJournal.reverse(card,before,this.actionState(),revision);
+      this.db.exec('COMMIT');return receipt;
+    }catch(error){this.db.exec('ROLLBACK');throw error;}
+  }
+
+  private writeActionState(before:SavedState,next:SavedState):void {
+    const projects=new Set(next.projects.map(project=>project.id)),categories=new Set(next.categories.map(category=>category.id));
+    const names=new Set(next.categories.map(category=>category.title.trim().toLowerCase()));
+    if(names.size!==categories.size)throw new Error('Another category now has that name. Rename it before undoing this action.');
+    const sections=new Map(next.sections.map(section=>[section.id,section])),tasks=new Map(next.tasks.map(task=>[task.id,task]));
+    const missing=()=>new Error('Undo needs a linked planner item that has changed or is missing.');
+    for(const section of next.sections)if(!projects.has(section.projectId))throw missing();
+    for(const task of next.tasks){
+      if(!projects.has(task.projectId)||task.sectionId&&sections.get(task.sectionId)?.projectId!==task.projectId)throw missing();
+      if(task.categoryId&&!categories.has(task.categoryId))throw missing();
+      if(task.steps.length>100)throw new Error('Undo would exceed the checklist’s step limit.');
+    }
+    validateTaskGraph(next.tasks);
+    for(const event of next.events){
+      if(event.categoryId&&!categories.has(event.categoryId)||event.linkedTaskId&&!tasks.has(event.linkedTaskId)||event.linkedStepId&&!tasks.get(event.linkedTaskId??'')?.steps.some(step=>step.id===event.linkedStepId))throw missing();
+      if(event.endDate<event.startDate||event.endTime&&!event.startTime||event.endDate===event.startDate&&event.startTime&&event.endTime&&event.endTime<=event.startTime)throw new Error('Undo would conflict with the block’s current date or time.');
+    }
+    const order=['category','project','section','task','event'] as const;
+    for(const entity of order){
+      const collection=actionCollections[entity],previous=new Map(before[collection].map(record=>[record.id,record]));
+      for(const record of next[collection])if(JSON.stringify(previous.get(record.id))!==JSON.stringify(record))this.put(entity,{...record});
+    }
+    for(const entity of [...order].reverse()){
+      const collection=actionCollections[entity],remaining=new Set(next[collection].map(record=>record.id));
+      for(const record of before[collection])if(!remaining.has(record.id))this.db.prepare(`DELETE FROM ${tables[entity]} WHERE id=?`).run(record.id);
+    }
   }
   organizePreview():{changes:Change[];descriptions:string[];revision:number}{
     const state=this.snapshot(),changes:Change[]=[...state.tasks.map(item=>({entity:'task' as const,item})),...state.events.map(item=>({entity:'event' as const,item}))].filter(({item})=>!item.categoryId).map(({entity,item})=>({action:'update',entity,id:item.id,fields:{categoryTitle:inferCategory(item.title,entity),colorOverride:null}}));

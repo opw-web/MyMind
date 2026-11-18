@@ -1,0 +1,27 @@
+{
+  "name": "bloom-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline-first, frontend-only React/TypeScript Bloom-inspired calendar and tasks prototype",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:offline": "node scripts/build.cjs",
+    "serve:offline": "python3 -m http.server 4173 --directory dist"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.0.0"
+  },
+  "license": "MIT"
+}

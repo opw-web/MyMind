@@ -27,17 +27,27 @@ export class OllamaRuntime {
     return info;
   }
   async settings() {
+    if(!this.status.port && this.status.state!=='ready')throw new Error(this.status.message);
     const tags=await this.call('tags'),models:string[]=[];
     for(const model of tags.models??[]){const name=String(model.name??model.model);try{await this.localModel(name,tags);models.push(name);}catch{}}
-    if(this.status.state==='ready')await this.gpuStatus();
-    return {model:this.model,context:this.modelOptions.num_ctx,activeContext:this.status.state==='ready'?this.status.context:null,models};
+    const active=this.status.state==='ready'?await this.runningModel():undefined;
+    if(active)this.setStatus({context:active.context_length});
+    return {model:this.model,context:this.modelOptions.num_ctx,activeContext:active?.context_length??null,models};
   }
   async configure(settings:{model:string;context:number}):Promise<void>{
     if(this.initializing)throw new Error('Wait for model loading to finish before changing settings.');
     await this.localModel(settings.model);
+    const previous={model:this.model,context:this.modelOptions.num_ctx};
+    const canRestore=this.status.state==='ready'&&(previous.model!==settings.model||previous.context!==settings.context);
     this.model=settings.model;this.modelOptions.num_ctx=settings.context;
     this.setStatus({model:this.model,context:settings.context});await this.retry();
-    if(this.status.state!=='ready')throw new Error(this.status.message);
+    if(this.status.state==='ready')return;
+    const failure=this.status.message;
+    if(canRestore&&!this.stopped){
+      this.model=previous.model;this.modelOptions.num_ctx=previous.context;
+      await this.retry();
+    }
+    throw new Error(failure);
   }
   get baseUrl(): string { return `http://127.0.0.1:${this.status.port}`; }
   private executable(): string {
@@ -128,11 +138,15 @@ export class OllamaRuntime {
       this.setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Could not start Ollama.' });
     }
   }
-  private async gpuStatus(): Promise<RuntimeStatus['gpu']> {
+  private async runningModel():Promise<{context_length:number;size:number;size_vram:number}|undefined> {
     const ps = await this.call('ps');
     const model = ps.models?.find((model:any) => model.name === this.model || model.model === this.model);
+    if(model&&typeof model.context_length!=='number')throw new Error('Ollama did not report its active context window. Update Ollama and retry.');
+    return model;
+  }
+  private async gpuStatus(): Promise<RuntimeStatus['gpu']> {
+    const model=await this.runningModel();
     if (!model) return 'unknown';
-    if(typeof model.context_length!=='number')throw new Error('Ollama did not report its active context window. Update Ollama and retry.');
     this.setStatus({context:model.context_length});
     return model.size_vram >= model.size * 0.99 ? 'full' : model.size_vram > 0 ? 'partial' : 'cpu';
   }

@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './bloom.css';
 
-document.documentElement.dataset.theme = new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light';
+document.documentElement.dataset.theme = 'light';
 
 async function mount() {
   let showWindow: (() => Promise<void>) | undefined;

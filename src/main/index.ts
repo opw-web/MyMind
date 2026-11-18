@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, powerMonitor, screen, nativeTheme } from 'electron';
+import { app, BrowserWindow, ipcMain, powerMonitor, screen } from 'electron';
 import { join } from 'node:path';
 import { mkdirSync, appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { PlannerDatabase } from './database';
@@ -8,6 +8,7 @@ import { preferenceSchema } from '../shared/validation';
 import { SpeechRuntime } from './speech';
 import {z} from 'zod';
 import {DictationDrafts} from './dictation-drafts';
+import type {ChatInput,ChatResult} from '../shared/model';
 
 const dataDir = process.env.MYMIND_DATA_DIR || join(process.env.LOCALAPPDATA ?? app.getPath('userData'), 'MYMIND');
 mkdirSync(dataDir, { recursive: true });
@@ -20,12 +21,16 @@ let window: BrowserWindow | undefined, db: PlannerDatabase | undefined, runtime:
 let shuttingDown = false;
 let speech:SpeechRuntime|undefined;
 let drafts:DictationDrafts|undefined,closePending=false,closeReady=false;
+let currentChat:{id:string;result:Promise<ChatResult>}|undefined;
 const dictationJobs=new Map<string,string>();
 const draftRequest=z.object({draftId:z.string().uuid(),generation:z.string().uuid(),requestId:z.string().uuid(),sequence:z.number().int().nonnegative()}).strict();
+const chatRequest=z.object({text:z.string().trim().min(1),requestId:z.string().min(1).max(100),selection:z.unknown().optional(),clarificationIssueId:z.string().min(1).optional()}).strict();
+const undoActionRequest=z.object({actionId:z.string().uuid(),requestId:z.string().min(1).max(100)}).strict();
 function log(error: unknown): void { try { appendFileSync(join(dataDir,'errors.log'), `${new Date().toISOString()} ${error instanceof Error ? error.stack : String(error)}\n`); } catch {} }
-function shutdown(): void {
+function shutdown(clean=false): void {
   if (shuttingDown) return; shuttingDown = true;
   assistant?.cancel(); speech?.stop(); runtime?.stop();
+  if(clean)try { db?.clearChat(); } catch (error) { log(error); }
   try { drafts?.close(); } catch (error) { log(error); }
   try { db?.close(); } catch (error) { log(error); }
 }
@@ -34,18 +39,18 @@ else {
   app.on('second-instance', () => { if (window?.isMinimized()) window.restore(); window?.show(); window?.focus(); });
   const prepareClose=()=>{
     if(closePending)return;closePending=true;
+    assistant?.cancel();
     if(window&&!window.isDestroyed())window.webContents.send('app:prepare-close');
-    const timer=setTimeout(()=>{closeReady=true;shutdown();app.quit();},3000);timer.unref();
+    const timer=setTimeout(()=>{closeReady=true;shutdown(true);app.quit();},3000);timer.unref();
   };
-  app.on('before-quit',event=>{if(!closeReady){event.preventDefault();prepareClose();}else shutdown();});
+  app.on('before-quit',event=>{if(!closeReady){event.preventDefault();prepareClose();}else shutdown(true);});
   app.on('window-all-closed', () => app.quit());
   process.on('uncaughtException', error => { log(error); shutdown(); app.exit(1); });
   process.on('unhandledRejection', error => { log(error); });
   app.whenReady().then(async () => {
     db = new PlannerDatabase(join(dataDir,'planner.sqlite'));
-    const applyAppearance=()=>{nativeTheme.themeSource=db!.snapshot().preferences.appearance??'light';window?.setBackgroundColor(nativeTheme.shouldUseDarkColors?'#292524':'#fff8f0');};
-    applyAppearance();
-    nativeTheme.on('updated',()=>window?.setBackgroundColor(nativeTheme.shouldUseDarkColors?'#292524':'#fff8f0'));
+    db.seedBloomCategories();
+    db.recoverChat();
     drafts = new DictationDrafts(join(dataDir,'dictation.sqlite'));
     const changed = () => { if (!shuttingDown && window && !window.isDestroyed()){window.webContents.send('planner:changed');window.webContents.send('assistant:event',{requestId:'',type:'draftchange',draft:assistant?.getDraft()??null});} };
     let savedSettings:{model:string;context:number}|undefined;
@@ -61,14 +66,38 @@ else {
     handle('planner:snapshot', () => db!.snapshot());
     handle('planner:mutate', input => { const result = db!.mutate(input); changed(); return result; });
     handle('planner:undo', revision => {const parsed=revision===undefined?undefined:z.number().int().nonnegative().parse(revision); const result = db!.undo(parsed); changed(); return result; });
+    handle('planner:undo-action',input=>{
+      if(closePending)throw new Error('MYMIND is closing.');
+      const revision=db!.revision,result=db!.undoAction(undoActionRequest.parse(input));
+      if(db!.revision!==revision)changed();
+      return result;
+    });
     handle('planner:organize-preview',()=>db!.organizePreview());
-    handle('planner:preferences', input => { db!.preferences(preferenceSchema.parse(input)); applyAppearance(); changed(); });
+    handle('planner:preferences', input => { db!.preferences(preferenceSchema.parse(input)); changed(); });
     handle('assistant:get-draft',()=>assistant!.getDraft());
     handle('assistant:apply-draft',input=>assistant!.applyDraft(input));
     handle('assistant:edit-draft',input=>assistant!.editDraft(input));
     handle('assistant:dismiss-draft',input=>assistant!.dismissDraft(input));
-    handle('assistant:chat', input => assistant!.chat(input));
-    handle('assistant:check-input', input => assistant!.checkInput(input));
+    handle('assistant:history',()=>db!.chatHistory());
+    handle('assistant:chat', input => {
+      if(closePending)throw new Error('MYMIND is closing.');
+      const parsed=chatRequest.parse(input) as ChatInput,id=parsed.requestId;
+      const cached=db!.chatResult(id);
+      if(cached){db!.beginChat(parsed);return cached;}
+      if(currentChat&&currentChat.id!==id)throw new Error('Wait for the current reply or stop it first.');
+      db!.beginChat(parsed);
+      if(currentChat)return currentChat.result;
+      const result=Promise.resolve().then(()=>assistant!.chatApplied(parsed)).then(reply=>{
+        if(shuttingDown)return reply;
+        return db!.finishChat(id,reply);
+      }).catch(error=>{
+        if(shuttingDown)throw error;
+        return db!.finishChat(id,{status:'failed',content:error instanceof Error?error.message:'The request could not be completed.'});
+      }).finally(()=>{if(currentChat?.id===id)currentChat=undefined;});
+      currentChat={id,result};
+      return result;
+    });
+    handle('assistant:check-input', input => assistant!.checkInput(input,true));
     handle('assistant:cancel', () => assistant!.cancel());
     handle('assistant:reset',()=>assistant!.reset());
     handle('assistant:status', () => runtime!.status);
@@ -112,19 +141,19 @@ else {
         drafts!.final(draft.id,p.generation,result.text,draft.reviewText.trim()===[draft.prefix.trim(),draft.liveText.trim()].filter(Boolean).join(' ')?draft.revision:undefined);return result;
       }finally{if(dictationJobs.get(draft.id)===p.requestId)dictationJobs.delete(draft.id);}
     });
-    handle('app:close-ready',()=>{if(closePending){closeReady=true;shutdown();setImmediate(()=>app.quit());}});
+    handle('app:close-ready',()=>{if(closePending){closeReady=true;shutdown(true);setImmediate(()=>app.quit());}});
     const available = screen.getPrimaryDisplay().workAreaSize;
     if (process.env.MYMIND_SKIP_OLLAMA !== '1') void runtime.start();
-    window = new BrowserWindow({ width: Math.min(1480,Math.max(1000,available.width-40)), height: Math.min(940,Math.max(650,available.height-40)), minWidth: 900, minHeight: 600, backgroundColor: nativeTheme.shouldUseDarkColors?'#292524':'#fff8f0', title: 'MYMIND', autoHideMenuBar: true, show: false, icon: join(__dirname,'../../assets/icon.ico'), webPreferences: { preload: join(__dirname,'preload.js'), nodeIntegration: false, contextIsolation: true, sandbox: true, spellcheck: false,backgroundThrottling:false } });
+    window = new BrowserWindow({ width: Math.min(1480,Math.max(390,available.width-40)), height: Math.min(940,Math.max(520,available.height-40)), minWidth: 390, minHeight: 520, backgroundColor: '#fff8f0', title: 'MYMIND', autoHideMenuBar: true, show: false, icon: join(__dirname,'../../assets/icon.ico'), webPreferences: { preload: join(__dirname,'preload.js'), nodeIntegration: false, contextIsolation: true, sandbox: true, spellcheck: false,backgroundThrottling:false } });
     window.removeMenu();
     window.webContents.session.setPermissionRequestHandler((contents,permission,callback,details)=>callback(contents===window?.webContents&&permission==='media'&&'mediaTypes' in details&&details.mediaTypes?.every(type=>type==='audio')===true));
     window.webContents.session.setPermissionCheckHandler((contents,permission,_origin,details)=>contents===window?.webContents&&permission==='media'&&details.mediaType==='audio');
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     window.webContents.on('will-navigate', event => event.preventDefault());
-    window.on('close', event=>{if(!closeReady){event.preventDefault();prepareClose();}else shutdown();});
+    window.on('close', event=>{if(!closeReady){event.preventDefault();prepareClose();}else shutdown(true);});
     window.on('closed', () => { window = undefined; });
     window.once('ready-to-show', () => { if (process.env.MYMIND_TEST_MODE !== '1') window?.show(); });
-    await window.loadFile(join(__dirname,'../renderer/index.html'),{query:{theme:nativeTheme.shouldUseDarkColors?'dark':'light'}});
+    await window.loadFile(join(__dirname,'../renderer/index.html'));
     powerMonitor.on('resume', () => { changed(); void runtime?.resume(); });
   }).catch(error => { log(error); shutdown(); app.exit(1); });
 }

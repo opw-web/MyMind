@@ -9,7 +9,8 @@ export interface EventItem extends Categorized { kind: EventKind; linkedStepId: 
 export interface Project { id: string; title: string; order: number; }
 export interface Section { id: string; projectId: string; title: string; order: number; }
 export interface TaskStep { id: string; title: string; completed: boolean; }
-export interface Task extends Categorized { createdAt: string | null; completedAt: string | null; id: string; title: string; notes: string; textBox: string; color: Color; dueDate: string | null; /** @deprecated Legacy input adapter; sessions are canonical. */ scheduledDate: string | null; completed: boolean; projectId: string; sectionId: string | null; order: number; steps: TaskStep[]; dependsOnIds: string[]; }
+export type TaskPriority = '' | 'Low' | 'Medium' | 'High';
+export interface Task extends Categorized { createdAt: string | null; completedAt: string | null; id: string; title: string; notes: string; textBox: string; color: Color; dueDate: string | null; priority?:TaskPriority; estimate?:string; /** @deprecated Legacy input adapter; sessions are canonical. */ scheduledDate: string | null; completed: boolean; projectId: string; sectionId: string | null; order: number; steps: TaskStep[]; dependsOnIds: string[]; }
 export interface Preferences { appearance?: 'light'|'dark'|'system'; timezone: string; dayWidth: number; year: number; chatOpen: boolean; voiceAutoSend?: boolean; chatWidth?: number; spokenReplies?: boolean; taskLayout?:'checklist'|'flow'; }
 export interface SpeechStatus { state: 'idle'|'loading'|'ready'|'error'|'stopped'; message: string; pid?: number; port?: number; }
 export interface Snapshot { revision: number; events: EventItem[]; tasks: Task[]; projects: Project[]; sections: Section[]; categories: Category[]; preferences: Preferences; canUndo: boolean; }
@@ -24,7 +25,18 @@ export interface DraftPreview { saved:false; draft:PendingDraft; }
 export interface ApplyDraftInput { draftId:string; version:number; expectedRevision:number; requestId:string; }
 export interface EditDraftInput { draftId:string; version:number; expectedRevision:number; changes?:Change[]; repreview?:boolean; resolveIssueIds?:string[]; }
 export interface DismissDraftInput { draftId:string; version:number; }
-export interface Receipt { draft?:DraftIdentity; label: string; descriptions: string[]; revision: number; items?: {id:string;entity:Entity;action:Change['action'];title:string}[]; }
+export type ActionPreviewTarget = {entity:'event'|'task'|'project'|'category'|'step';id:string;taskId?:string;before?:Record<string,unknown>};
+export interface ActionReceipt {actionId:string;action:Change['action'];title:string;target:ActionPreviewTarget;undone?:boolean;}
+export interface UndoActionInput {actionId:string;requestId:string;}
+export type AssistantViewAction =
+  | {type:'tab';tab:'calendar'|'tasks'}
+  | {type:'date';date:string}
+  | {type:'categoryVisibility';categoryId:string;visible:boolean}
+  | {type:'showAllCategories'}
+  | {type:'taskFilters';completion?:'active'|'completed'|'all';schedule?:'all'|'scheduled'|'unscheduled'}
+  | {type:'projectCollapsed';projectId:string;collapsed:boolean}
+  | {type:'taskExpanded';taskId:string;expanded:boolean};
+export interface Receipt { draft?:DraftIdentity; label: string; descriptions: string[]; revision: number; items?: {id:string;entity:Entity;action:Change['action'];title:string}[]; actions?:ActionReceipt[]; }
 export interface RuntimeStatus { state: 'starting' | 'loading' | 'ready' | 'error' | 'stopped'; message: string; model: string; context: number; gpu: 'unknown' | 'full' | 'partial' | 'cpu'; port?: number; pid?: number; startup?: {serverMs:number;checksMs:number;modelMs:number;totalMs:number;ollamaLoadMs?:number}; }
 export interface Selection { entity: 'event'|'task'; id:string; revision:number; entryType?:'session'|'deadline'; draftId?:string; draftVersion?:number; }
 export interface ChatInput { text:string; requestId:string; selection?:Selection; clarificationIssueId?:string; }
@@ -35,13 +47,14 @@ export interface DictationDraft { id:string; generation:string; prefix:string; l
 export interface SpeechPreviewInput { draftId:string; generation:string; requestId:string; sequence:number; pcm:ArrayBuffer; sampleRate:16000; offset:number; }
 export interface DraftTranscriptionInput { draftId:string; generation:string; requestId:string; sequence:number; }
 export type SpeechProgress = DraftTranscriptionInput & {text:string; seconds:number};
-export interface ChatResult { content: string; receipt?: Receipt; preview?:DraftPreview; disposition?:'dismissed'|'superseded'; contextTrimmed?: boolean; }
+export interface ChatResult { content: string; receipt?: Receipt; preview?:DraftPreview; disposition?:'dismissed'|'superseded'; contextTrimmed?: boolean; viewActions?:AssistantViewAction[]; status?:'failed'|'interrupted'; }
 export interface ChatMessage extends ChatResult { id: string; role: 'user' | 'assistant'; }
 export type ChatEvent = {requestId:string;type:'progress';stage:'understanding'|'searching'|'preparing'|'saving'|'responding';message:string} | {requestId:string;type:'text';text:string} | {requestId:string;type:'receipt';receipt:Receipt} | {requestId:string;type:'preview';preview:DraftPreview} | {requestId:string;type:'draftchange';draft:PendingDraft|null} | {requestId:string;type:'done';contextTrimmed:boolean} | {requestId:string;type:'error';message:string};
 export interface PlannerAPI {
   snapshot(): Promise<Snapshot>;
   mutate(input: Mutation): Promise<Receipt>;
   undo(expectedRevision?:number): Promise<Receipt>;
+  undoAction(input:UndoActionInput): Promise<ActionReceipt>;
   organizePreview(): Promise<{changes:Change[];descriptions:string[];revision:number}>;
   preferences(input: Partial<Preferences>): Promise<void>;
   getDraft(): Promise<PendingDraft|null>;
@@ -50,6 +63,7 @@ export interface PlannerAPI {
   dismissDraft(input:DismissDraftInput): Promise<void>;
   onDraftChanged(fn:(draft:PendingDraft|null)=>void):()=>void;
   chat(input: ChatInput): Promise<ChatResult>;
+  chatHistory(): Promise<ChatMessage[]>;
   checkChatInput(input: Omit<ChatInput,'requestId'>): Promise<ChatInputCheck>;
   cancelChat(): Promise<void>;
   newChat(): Promise<void>;

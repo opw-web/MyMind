@@ -3,7 +3,7 @@ import {LiveTranscript} from './live-transcript';
 
 type Phase='idle'|'starting'|'listening'|'finishing'|'failed'|'review';
 export type DictationState={phase:Phase;caption:string;error:string;level:number;seconds:number;lag:number;unsaved:boolean;draft?:DictationDraft;drafts:DictationDraft[];text:string;textVersion:number;finalProgress:string};
-type Capture={draft?:DictationDraft;stream?:MediaStream;context?:AudioContext;source?:MediaStreamAudioSourceNode;worklet?:AudioWorkletNode;recorder?:MediaRecorder;stopped?:Promise<void>;timer?:ReturnType<typeof setInterval>;started:number;stopping:boolean;pending:{sequence:number;blob:Blob;seconds:number}[];nextSequence:number;saving?:Promise<void>;flushing?:Promise<void>;pcm:Float32Array;frames:number;previewId?:string;previewPromise?:Promise<void>;lastPreview:number;previewSequence:number;merger:LiveTranscript;};
+type Capture={editsAtStart:number;draft?:DictationDraft;stream?:MediaStream;context?:AudioContext;source?:MediaStreamAudioSourceNode;worklet?:AudioWorkletNode;recorder?:MediaRecorder;stopped?:Promise<void>;timer?:ReturnType<typeof setInterval>;started:number;stopping:boolean;pending:{sequence:number;blob:Blob;seconds:number}[];nextSequence:number;saving?:Promise<void>;flushing?:Promise<void>;pcm:Float32Array;frames:number;previewId?:string;previewPromise?:Promise<void>;lastPreview:number;previewSequence:number;merger:LiveTranscript;};
 const append=(prefix:string,text:string)=>[prefix.trim(),text.trim()].filter(Boolean).join(' ');
 const errorText=(e:unknown)=>e instanceof Error?e.message:String(e);
 const active=(phase:Phase)=>phase==='starting'||phase==='listening'||phase==='finishing';
@@ -69,7 +69,7 @@ class DictationSession {
     if(active(this.state.phase))return;
     await this.metadata;
     if(this.capture?.pending.length){this.fail(new Error('Save the retained recording before starting another.'));return;}
-    const c:Capture={started:performance.now(),stopping:false,pending:[],nextSequence:0,pcm:new Float32Array(0),frames:0,lastPreview:0,previewSequence:0,merger:new LiveTranscript()};
+    const c:Capture={editsAtStart:this.edits,started:performance.now(),stopping:false,pending:[],nextSequence:0,pcm:new Float32Array(0),frames:0,lastPreview:0,previewSequence:0,merger:new LiveTranscript()};
     this.capture=c;this.operation++;this.request=undefined;
     this.update({phase:'starting',caption:'Opening your microphone…',error:'',seconds:0,lag:0,finalProgress:'',draft:undefined,text:prefix,unsaved:false});
     void window.planner.startSpeech().catch(e=>{if(this.capture===c&&!c.stopping)this.fail(e,'Speech is unavailable. Your recording is still being saved.');});
@@ -126,7 +126,7 @@ class DictationSession {
   }
   private async preview(c:Capture){
     if(c.stopping||this.capture!==c||!c.draft||c.frames/16000-c.lastPreview<1)return;
-    const draft=c.draft,end=c.frames/16000,offset=(c.frames-c.pcm.length)/16000;
+    const editVersion=this.edits,draft=c.draft,end=c.frames/16000,offset=(c.frames-c.pcm.length)/16000;
     c.previewId=crypto.randomUUID();const id=c.previewId,sequence=++c.previewSequence;
     const pending=(async()=>{
       try{
@@ -135,7 +135,7 @@ class DictationSession {
         const liveText=c.merger.merge(result.words,offset);
         c.lastPreview=end;
         if(liveText){
-          const text=append(draft.prefix,liveText);
+          const text=this.edits===editVersion&&this.edits===c.editsAtStart?append(draft.prefix,liveText):this.state.text;
           this.update({draft:{...this.state.draft!,liveText,reviewText:text},caption:'Recording… press Stop when you’re finished.'});this.publish(text);
           await this.checkpoint({draftId:draft.id,generation:draft.generation,liveText,reviewText:text,seconds:end});
         }
@@ -168,14 +168,14 @@ class DictationSession {
       await flushing;
       if(this.capture!==c)return;
       this.update({phase:'review',caption:'Draft saved locally. Review it or retry transcription.'});void this.refresh();
-      if(transcribe&&operation===this.operation&&c.draft?.bytes)await this.transcribe();
+      if(transcribe&&operation===this.operation&&c.draft?.bytes)return await this.transcribe(this.edits!==c.editsAtStart);
     }catch(e){this.release(c);if(this.capture===c){this.update({phase:'failed'});this.fail(e,'Your recording is retained. Retry saving and transcription.');}}
   }
   private async recordingFailed(c:Capture,e:unknown){
     if(c.stopping||this.capture!==c)return;await this.stop(false);
     if(this.capture===c){this.update({phase:'failed'});this.fail(e,'Recording stopped unexpectedly. Captured audio and text are retained.');}
   }
-  async transcribe(){
+  async transcribe(preserveEdits=false){
     if(this.request||this.state.phase==='listening'||this.state.phase==='starting')return;
     const draft=this.state.draft;if(!draft)return;
     const token=++this.operation,editVersion=this.edits,id=crypto.randomUUID(),sequence=++this.requestSequence;
@@ -187,8 +187,10 @@ class DictationSession {
       if(this.operation!==token||this.request!==id)return;
       const saved=await window.planner.getDictation(draft.id);
       if(this.operation!==token||this.request!==id)return;
+      if(preserveEdits||this.edits!==editVersion){saved.reviewText=this.state.text;await this.checkpoint({draftId:saved.id,generation:saved.generation,reviewText:this.state.text});}
+      if(this.operation!==token||this.request!==id)return;
       this.update({draft:saved,phase:result.text.trim()?'review':'failed',caption:result.text.trim()?'Transcript ready. Review it, then press Send.':'No speech found in the final pass. Your live text and recording are retained.'});
-      if(result.text.trim()&&this.edits===editVersion)this.publish(saved.reviewText);
+      if(result.text.trim()&&!preserveEdits&&this.edits===editVersion){this.publish(saved.reviewText);void this.refresh();return saved.reviewText;}
       void this.refresh();
     }catch(e){if(this.operation===token&&this.request===id){this.update({phase:'failed'});this.fail(e);}}
     finally{if(this.request===id)this.request=undefined;}

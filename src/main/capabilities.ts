@@ -2,16 +2,33 @@ import {Change,COLORS,DraftPreview,Receipt} from '../shared/model';
 import {requestsNewProject} from './project-workflow';
 import {projectGroupingIntent} from './project-grouping';
 import {hasExplicitDeletion} from './deletion-intent';
+import {viewActionParameters} from './assistant-view';
 const entity={type:'string',enum:['all','event','task','project','section','category']};
 const session={type:'object',properties:{startDate:{type:'string'},endDate:{type:'string'},startTime:{type:['string','null']},endTime:{type:['string','null']},linkedStepId:{type:['string','null']}},required:['startDate'],additionalProperties:false};
 const fields={title:{type:'string'},notes:{type:'string'},textBox:{type:'string'},color:{type:'string',enum:COLORS},categoryTitle:{type:'string'},categoryId:{type:['string','null']},colorOverride:{type:['string','null'],enum:[...COLORS,null]},startDate:{type:'string'},endDate:{type:'string'},startTime:{type:['string','null']},endTime:{type:['string','null']},kind:{type:'string',enum:['planned','actual'],description:'Planned sessions and factual actual activity are independent.'},linkedTaskId:{type:['string','null']},linkedTaskTitle:{type:'string'},linkedStepId:{type:['string','null']},linkedStepTitle:{type:'string'},dueDate:{type:['string','null'],description:'Independent optional task deadline. Displayed as an all-day marker, never saved as an event.'},completed:{type:'boolean',description:'Task completion only; linked calendar controls route to task/step completion. Standalone events cannot complete.'},steps:{type:'array',description:'Only edit when requested. Retrieve existing steps first and retain their IDs.',items:{type:'object',properties:{id:{type:'string'},title:{type:'string'},completed:{type:'boolean'}},required:['title'],additionalProperties:false}},dependsOnIds:{type:'array',items:{type:'string'}},dependsOnTitles:{type:'array',items:{type:'string'}},projectId:{type:'string'},sectionId:{type:['string','null']},projectTitle:{type:'string'},sectionTitle:{type:'string'},order:{type:'integer'}};
 type PlannerAction=Change['action']|'restore';
 const mutationActions:Change['action'][]=['create','update','delete'];
-function stageChanges(actions:readonly Change['action'][]){
-  const identity={entity:{type:'string',enum:entity.enum.filter(value=>value!=='all')},id:{type:'string'}};
+function stageChanges(actions:readonly Change['action'][],bloom=false){
+  const identity={entity:{type:'string',enum:entity.enum.filter(value=>value!=='all'&&(!bloom||value!=='section'))},id:{type:'string'}};
+  const attributes=bloom?{
+    ...Object.fromEntries(Object.entries(fields).filter(([name])=>!['textBox','dependsOnIds','dependsOnTitles','sectionId','sectionTitle','order'].includes(name))),
+    dueDate:{type:['string','null'],description:'Task due date, independent of calendar blocks.'},
+    priority:{type:'string',enum:['','Low','Medium','High']},estimate:{type:'string'},
+  }:fields;
   const editable=actions.filter(action=>action!=='delete');
   const branches=[];
-  if(editable.length)branches.push({type:'object',properties:{action:{type:'string',enum:editable},...identity,...fields},required:['action','entity'],additionalProperties:false});
+  if(editable.length&&bloom){
+    const editableFields={
+      project:['title'],
+      task:['title','projectId','projectTitle','steps','dueDate','completed','priority','estimate','notes','categoryId','colorOverride'],
+      event:['title','kind','startDate','endDate','startTime','endTime','linkedTaskId','linkedTaskTitle','linkedStepId','linkedStepTitle','notes','categoryId','colorOverride'],
+      category:['title','color']
+    };
+    for(const [name,names] of Object.entries(editableFields)){
+      const properties=Object.fromEntries(Object.entries(attributes).filter(([field])=>names.includes(field)));
+      branches.push({type:'object',properties:{action:{type:'string',enum:editable},...identity,entity:{type:'string',enum:[name]},...properties},required:['action','entity'],additionalProperties:false});
+    }
+  }else if(editable.length)branches.push({type:'object',properties:{action:{type:'string',enum:editable},...identity,...attributes},required:['action','entity'],additionalProperties:false});
   if(actions.includes('delete'))branches.push({type:'object',properties:{action:{type:'string',enum:['delete']},...identity},required:['action','entity','id'],additionalProperties:false});
   return {name:'stage_changes',description:'Validate and accumulate a proposed batch. Sessions are event records and may link to a task and step. Forward references to new tasks and steps are resolved within the batch. Preserve independent session content and dates on task edits. For deletion send only action, entity, and the verified ID. No saving occurs.',parameters:{type:'object',properties:{changes:{type:'array',items:branches.length===1?branches[0]:{anyOf:branches}}},required:['changes'],additionalProperties:false}};
 }
@@ -24,21 +41,27 @@ export const PLANNER_CAPABILITIES=[
  {mutation:true,type:'function',function:{name:'undo_changes',description:'Propose the inverse of the latest actually applied batch from this chat, bound to that exact history head. Can compose with subsequent draft edits. No saving occurs.',parameters:{type:'object',properties:{expectedRevision:{type:'integer'}},required:['expectedRevision'],additionalProperties:false}}},
  {mutation:false,type:'function',function:{name:'finish_request',description:'Finish with no changes or a necessary clarification. Required questions block Apply for the entire batch; never partially save clear work.',parameters:{type:'object',properties:{outcome:{type:'string',enum:['no_change','clarification']},message:{type:'string'},targetIds:{type:'array',items:{type:'string'}}},required:['outcome','message'],additionalProperties:false}}}
 ];
-export function toolDefinitions(writable:boolean,independentSessions=false,actions?:ReadonlySet<PlannerAction>){
+export function toolDefinitions(writable:boolean,independentSessions=false,actions?:ReadonlySet<PlannerAction>,autoApply=false,viewActions=false){
   const changes=actions?mutationActions.filter(action=>actions.has(action)):mutationActions;
   return PLANNER_CAPABILITIES.flatMap(({mutation,...definition})=>{
     if(mutation&&!writable)return [];
     switch(definition.function.name){
       case 'stage_tasks':if(independentSessions||actions&&!actions.has('create'))return [];break;
-      case 'stage_changes':if(!changes.length)return [];return [{...definition,function:stageChanges(changes)}];
-      case 'restore_item':case 'undo_changes':if(actions&&!actions.has('restore'))return [];break;
+      case 'stage_changes':if(!changes.length)return [];return [{...definition,function:stageChanges(changes,autoApply)}];
+      case 'undo_changes':if(actions&&!actions.has('restore'))return [];break;
+      case 'restore_item':if(actions&&!actions.has('restore'))return [];break;
+      case 'preview_changes':if(autoApply)return [];break;
+      case 'finish_request':if(autoApply)return [{...definition,function:{...definition.function,
+        description:'Apply the complete staged batch immediately with outcome=apply. No user confirmation is needed. Use clarification only for a required missing detail. Use no_change for a read-only answer.',
+        parameters:{type:'object',properties:{outcome:{type:'string',enum:writable?['apply','no_change','clarification']:['no_change','clarification']},message:{type:'string'},targetIds:{type:'array',items:{type:'string'}},...(viewActions?{viewActions:viewActionParameters}:{})},required:['outcome','message'],additionalProperties:false}
+      }}];break;
     }
     return [definition];
   });
 }
 export const PLANNER_HELP='Tasks have optional independent deadlines displayed as all-day Deadline markers. A task can have many planned or actual calendar sessions, optionally linked to a checklist step. Sessions own their titles, notes, dates and times. Editing deadlines never moves sessions. Deleting tasks or steps detaches their sessions. Standalone events have no completion control. Task completion displays across linked blocks and deadline markers; step completion is independent. Completed tasks archive after 24 hours while their calendar blocks remain. Projects and sections organize work; categories provide reusable labels and colors. The assistant prepares one editable preview. Corrections and new requests join it; questions use its projected state. Review and Apply saves the whole batch once. Required questions must be resolved first. Dismiss or New chat clears proposals; Stop preserves the last valid preview. Manual editing and Undo remain immediate. Voice stays local.';
-export function plannerExplanation(text:string):string|undefined{
- if(/\b(how|explain|walk me through)\b/i.test(text)&&/\b(to[ -]?do(?: list)?|2dlest|2d list)\b/i.test(text))return PLANNER_HELP;
+export function plannerExplanation(text:string,autoApply=false):string|undefined{
+ if(/\b(how|explain|walk me through)\b/i.test(text)&&/\b(to[ -]?do(?: list)?|2dlest|2d list)\b/i.test(text))return autoApply?'Tasks can stand alone or belong to a project. You can add checklist steps, a due date, a priority, an estimate, a category, and notes. A due date is separate from scheduled time. A linked task can have multiple blocks on the same calendar. Check off tasks and steps independently. The assistant saves a complete request and shows a preview for each changed item, with an individual undo button. Voice stays local.':PLANNER_HELP;
 }
 export function savedReply(receipt:Receipt,restored=false):string{
   const items=receipt.items?.filter(item=>item.entity!=='category')??[];

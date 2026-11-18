@@ -10,10 +10,14 @@ const stepKey=(title:string)=>words(title).filter(word=>!['a','an','the'].includ
 
 function explicitStepLists(text:string,targets:Target[]):Map<number,string[]>{
   const lists=new Map<number,string[]>(),repeated=new Set<number>();
+  let previousTaskClause='';
   for(const sentence of text.split(/[.!?\n]+/)){
     const markers=[...sentence.matchAll(stepMarker)];
-    if(!markers.length)continue;
-    const scope=sentence.slice(0,markers[0].index);
+    const declaration=/^\s*(?:the|its)\s+(?:checklist(?: steps| items)?|steps)\s+(?:should be|are)\s+(.+)/i.exec(sentence);
+    const precedingScope=previousTaskClause;
+    previousTaskClause=/\b(?:add|create|make)\s+(?:(?:a|an|the|standalone)\s+)*task\b/i.test(sentence)?sentence:'';
+    if(!markers.length&&!declaration)continue;
+    const scope=declaration?precedingScope:sentence.slice(0,markers[0].index);
     if(!/\b(?:i (?:need|want|have) to|add|create|make)\b/i.test(scope)||/\b(?:not|never|without|if|might|maybe)\b|n['’]t\b/i.test(scope))continue;
     const named=` ${topic(scope).join(' ')} `;
     const matches=targets.flatMap((target,index)=>{
@@ -23,11 +27,11 @@ function explicitStepLists(text:string,targets:Target[]):Map<number,string[]>{
     });
     if(matches.length!==1)continue;
     const [target]=matches;
-    const titles=markers.flatMap((marker,index)=>{
+    const titles=declaration?declaration[1].trim().split(/\s*,\s*(?:and\s+)?|\s+and\s+/i):markers.flatMap((marker,index)=>{
       const phrase=sentence.slice(marker.index+marker[0].length,markers[index+1]?.index).trim().replace(/\s*(?:[,;]\s*)?(?:\band\s*)?$/i,'');
       return marker[1]?phrase.split(/\s*,\s*(?:and\s+)?/i):[phrase];
     });
-    if(titles.some(title=>words(title).length<2||title.length>240||/[;:]|\b(?:also|then)\s+(?:add|create|make)\b|\b(?:due date|due on|due by)\b/i.test(title)))continue;
+    if(titles.some(title=>words(title).length<(declaration?1:2)||title.length>240||/[;:]|\b(?:also|then)\s+(?:add|create|make)\b|\b(?:due date|due on|due by)\b/i.test(title)))continue;
     if(lists.has(target)||repeated.has(target)){
       lists.delete(target);
       repeated.add(target);

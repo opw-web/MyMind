@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {ApplyDraftInput,Change,DismissDraftInput,DraftIssue,EditDraftInput,PendingDraft,Receipt,Snapshot} from '../shared/model';
+import {ApplyDraftInput,AssistantViewAction,Change,DismissDraftInput,DraftIssue,EditDraftInput,PendingDraft,Receipt,Snapshot} from '../shared/model';
 import {CompiledBatch,PlannerDatabase,RestoreToken,UndoToken} from './database';
 import {prepareDraft} from './draft';
 import {eventIntervalMinutes} from '../shared/calendar';
@@ -34,6 +34,11 @@ export class PendingDraftService {
  end(turn?:DraftTurn):void {if(turn)this.active.delete(turn.jobId);else this.active.clear();this.changed(this.getDraft());}
  key(requestId:string,key:string):string {let map=this.keys.get(requestId);if(!map){map=new Map();this.keys.set(requestId,map);}let id=map.get(key);if(!id){id=randomUUID();map.set(key,id);}return id;}
  disposition(id:string){return this.dispositions.get(id);}
+ checkpoint():()=>void {
+  const prior=this.current;
+  return ()=>{this.current=prior;this.generation++;};
+ }
+ clearWorkingDraft():void {this.current=undefined;this.generation++;}
  questionContext(id:string):RequestQuestion|undefined {const context=this.current?.questions.get(id);return context&&this.current?.unresolved.some(issue=>issue.id===id)?structuredClone(context):undefined;}
  referencedQuestions(text:string):string[] {
   if(/\b(?:another|different|separate|new)\b|^(?:how|why|what|when|where|if|imagine|suppose)\b|\b(?:don't|do not|never|what if)\b/i.test(text))return [];
@@ -154,13 +159,13 @@ export class PendingDraftService {
   const turn:DraftTurn={jobId:'typed-edit',generation:this.generation,version:s.version,revision:this.db.revision,draftId:s.id,requestId:'typed-edit'};
   return this.stage(turn,p.changes??[],{resolveIssueIds:resolved});
  }
- applyDraft(input:ApplyDraftInput):Receipt {
+ applyDraft(input:ApplyDraftInput,options?:{chatRequestId:string;content:string;viewActions?:AssistantViewAction[]}):Receipt {
   const p=applySchema.parse(input);if(this.busy)throw new Error('Wait for the correction to finish or stop it before Apply.');
   const existing=this.db.draftReceipt(p);if(existing)return existing;
   const s=this.require(p);if(p.expectedRevision!==s.baseRevision||this.getDraft()?.stale)throw new Error('Your planner changed. Re-preview this draft before Apply.');
   if(s.unresolved.some(issue=>issue.required))throw new Error('Resolve the required draft questions before Apply.');
   if(!s.compiled.items.some(item=>item.action!=='undo')&&!s.undo)throw new Error('There are no planner changes to apply.');
-  const receipt=this.db.applyBatch(s.compiled,p);this.dispositions.set(s.id,{status:'applied',receipt});this.current=undefined;this.generation++;this.changed(null);return receipt;
+  const receipt=this.db.applyBatch(s.compiled,p,options);this.dispositions.set(s.id,{status:'applied',receipt});this.current=undefined;this.generation++;this.changed(null);return receipt;
  }
  dismissDraft(input:DismissDraftInput):void {const p=z.object(identity).strict().parse(input),s=this.require(p);this.dispositions.set(s.id,{status:'dismissed'});this.current=undefined;this.generation++;this.active.clear();this.changed(null);}
  reset():void {if(this.current)this.dispositions.set(this.current.id,{status:'dismissed'});this.current=undefined;this.generation++;this.active.clear();this.changed(null);}
