@@ -271,7 +271,7 @@ dialog.dialog>form,.editor-form{display:flex;flex-direction:column;min-height:0;
 .dictation-preview-heading small{font-size:11px;color:var(--text-muted,#b49a8e)}
 .dictation-preview-text{max-height:180px;overflow:auto;font-size:14px;line-height:1.6;margin:10px 0;white-space:pre-wrap}
 .dictation-preview .button-row,.recovered-dictations .button-row{margin-top:8px}
-.dictation-preview button,.recovered-dictations button,.dictation-cancel{font-size:11px;font-weight:850;min-height:30px;padding:4px 10px;background:var(--surface-soft,#fffcf8);border:1px solid var(--boundary,#e7d8cc);border-radius:8px;color:var(--text-primary,#805d51)}
+.dictation-preview button,.dictation-cancel{font-size:11px;font-weight:850;min-height:30px;padding:4px 10px;background:var(--surface-soft,#fffcf8);border:1px solid var(--boundary,#e7d8cc);border-radius:8px;color:var(--text-primary,#805d51)}
 .dictation-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--text-primary,#8e7770)}
 .dictation-caption{flex:1 1 100%;font-size:11px;color:var(--text-muted,#ad9488)}
 .transcript-version summary,.recovered-dictations summary{cursor:pointer;font-size:12px;font-weight:850}

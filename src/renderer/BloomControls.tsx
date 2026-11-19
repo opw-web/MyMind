@@ -3,6 +3,8 @@ import type {ActionPreviewTarget} from '../shared/model';
 import {Icon} from './App';
 import {PixelFlower} from './Pixel';
 
+export type PlannerPreviewTarget = ActionPreviewTarget & {calendarDeadline?: boolean};
+
 export function Button({children, icon, variant = 'outline', className = '', ...props}: ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: string; variant?: 'primary' | 'outline' | 'ghost';
 }) {

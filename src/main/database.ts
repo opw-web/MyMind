@@ -456,6 +456,7 @@ export class PlannerDatabase {
   chatResult(requestId:string){return this.chatJournal.result(requestId);}
   finishChat(requestId:string,result:ChatResult){return this.chatJournal.finish(requestId,result);}
   chatHistory(){return this.chatJournal.history();}
+  startConversation(){this.chatJournal.startConversation();}
   recoverChat(){this.chatJournal.recover();}
   clearChat(){this.chatJournal.clear();this.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');}
 

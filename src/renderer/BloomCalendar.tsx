@@ -1,9 +1,10 @@
 import React, {forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {EventItem, Snapshot, ActionPreviewTarget} from '../shared/model';
+import type {EventItem, Snapshot, Task} from '../shared/model';
+import {calendarEntries, type CalendarEntry} from '../shared/calendar';
 import {daysBetween, shiftDate, weekday} from '../shared/dates';
 import {Icon} from './App';
 import {PixelFlower} from './Pixel';
-import {previewClass} from './BloomControls';
+import {previewClass, type PlannerPreviewTarget} from './BloomControls';
 
 const HOUR_PX = 66;
 const GUTTER = 68;
@@ -23,14 +24,15 @@ interface Props {
   today: string;
   now: number;
   hiddenCategories: ReadonlySet<string>;
-  target: ActionPreviewTarget | null;
+  target: PlannerPreviewTarget | null;
   onOpen: (event: EventItem) => void;
+  onTask: (task: Task) => void;
   onNew: (slot: BlockSlot) => void;
   onLead: (date: string) => void;
 }
 interface Selection {date: string; origin: number; column: HTMLElement}
 interface DragRange {date: string; first: number; last: number}
-interface Segment {event: EventItem; start: number; end: number; lane: number; lanes: number}
+interface Segment {event: CalendarEntry; start: number; end: number; lane: number; lanes: number}
 
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
 const clock = (at: number) => `${String(Math.floor(at / 60)).padStart(2, '0')}:${String(at % 60).padStart(2, '0')}`;
@@ -44,7 +46,7 @@ function getSlot(y: number, column: HTMLElement) {
   return Math.min(1410, Math.floor(Math.max(0, y - column.getBoundingClientRect().top) / (MINUTE_PX * 30)) * 30);
 }
 
-function layoutBlocks(events: EventItem[], date: string) {
+function layoutBlocks(events: CalendarEntry[], date: string) {
   const segments = events.flatMap(event => {
     if (!event.startTime) return [];
     const start = event.startDate === date ? minutes(event.startTime) : 0;
@@ -71,7 +73,7 @@ function layoutBlocks(events: EventItem[], date: string) {
 }
 
 const BloomCalendar = forwardRef<CalendarHandle, Props>(function BloomCalendar(
-  {snapshot, today, now, hiddenCategories, target, onOpen, onNew, onLead}, ref,
+  {snapshot, today, now, hiddenCategories, target, onOpen, onTask, onNew, onLead}, ref,
 ) {
   const [anchor] = useState(today);
   const [range, setRange] = useState({start: -90, end: 121});
@@ -87,17 +89,21 @@ const BloomCalendar = forwardRef<CalendarHandle, Props>(function BloomCalendar(
   const previousWidth = useRef(dayWidth);
   const measured = useRef(0);
   const selection = useRef<Selection | null>(null);
+  const highlightedAllDay = useRef<HTMLButtonElement>(null);
 
   const days = useMemo(() => Array.from({length: range.end - range.start}, (_, index) => shiftDate(anchor, range.start + index)), [anchor, range]);
-  const taskTitles = useMemo(() => new Map(snapshot.tasks.map(task => [task.id, task.title])), [snapshot.tasks]);
+  const tasksById = useMemo(() => new Map(snapshot.tasks.map(task => [task.id, task])), [snapshot.tasks]);
   const categoryColors = useMemo(() => new Map(snapshot.categories.map(category => [category.id, category.color])), [snapshot.categories]);
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, EventItem[]>();
+    const map = new Map<string, CalendarEntry[]>();
     const events = target?.entity === 'event' && target.before && !snapshot.events.some(event => event.id === target.id)
       ? [...snapshot.events, {...target.before, id: target.id} as unknown as EventItem]
       : snapshot.events;
-    for (const event of events) {
-      if (event.categoryId && hiddenCategories.has(event.categoryId) && !(target?.entity === 'event' && target.id === event.id)) continue;
+    for (const event of calendarEntries({events, tasks: snapshot.tasks})) {
+      const previewed = event.entryType === 'deadline'
+        ? target?.calendarDeadline && target.id === event.linkedTaskId
+        : target?.entity === 'event' && target.id === event.id;
+      if (event.categoryId && hiddenCategories.has(event.categoryId) && !previewed) continue;
       const first = Math.max(0, daysBetween(days[0], event.startDate));
       const last = Math.min(days.length - 1, daysBetween(days[0], event.endDate));
       for (let index = first; index <= last; index++) {
@@ -109,7 +115,7 @@ const BloomCalendar = forwardRef<CalendarHandle, Props>(function BloomCalendar(
       }
     }
     return map;
-  }, [snapshot.events, days, hiddenCategories, target]);
+  }, [snapshot.events, snapshot.tasks, days, hiddenCategories, target]);
 
   function request(next: NonNullable<typeof pending.current>) {
     const offset = daysBetween(anchor, next.date);
@@ -175,6 +181,16 @@ const BloomCalendar = forwardRef<CalendarHandle, Props>(function BloomCalendar(
     if (started.current) publishPosition(element);
   }, [days, dayWidth, layout]);
 
+  useLayoutEffect(() => {
+    const chip = highlightedAllDay.current;
+    const cell = chip?.parentElement;
+    if (!chip || !cell) return;
+    const bounds = chip.getBoundingClientRect();
+    const viewport = cell.getBoundingClientRect();
+    if (bounds.top < viewport.top) cell.scrollTop += bounds.top - viewport.top;
+    else if (bounds.bottom > viewport.bottom) cell.scrollTop += bounds.bottom - viewport.bottom;
+  }, [target, days, snapshot]);
+
   function onScroll() {
     const element = scroller.current;
     if (!element?.clientWidth || !started.current) return;
@@ -219,14 +235,22 @@ const BloomCalendar = forwardRef<CalendarHandle, Props>(function BloomCalendar(
     };
   }, [onNew]);
 
-  function renderBlock(event: EventItem, date: string, segment?: Segment) {
-    const title = (event.linkedTaskId && taskTitles.get(event.linkedTaskId)) || event.title;
+  function renderBlock(entry: CalendarEntry, date: string, segment?: Segment) {
+    const {entryType, canComplete: _canComplete, ...event} = entry;
+    const task = event.linkedTaskId ? tasksById.get(event.linkedTaskId) : undefined;
+    const title = task?.title || event.title;
     const color = (event.categoryId && categoryColors.get(event.categoryId)) || event.color;
+    const deadlinePreview = entryType === 'deadline' && target?.calendarDeadline && target.id === task?.id;
+    if (entryType === 'deadline' && task) return <button type="button" key={entry.id} ref={deadlinePreview ? highlightedAllDay : undefined}
+      data-entry-type="deadline" data-linked-task={task.id}
+      className={`all-day-chip color-${color}${task.completed ? ' is-completed' : ''}${deadlinePreview ? previewClass(target, 'task', task.id) : ''}`}
+      title={`Due: ${title}`} onClick={click => {click.stopPropagation(); onTask(task);}}>{title}</button>;
     const css = ` color-${color}${previewClass(target, 'event', date === event.startDate ? event.id : '')}`;
     const deleted = target?.entity === 'event' && target.id === event.id && !!target.before;
     const data = {'data-event-id': event.id, 'data-entry-type': 'session', 'data-start-date': event.startDate, 'data-end-date': event.endDate,
       'data-linked-task': event.linkedTaskId ?? undefined};
-    if (!segment || !event.startTime) return <button type="button" key={event.id} {...data} className={'all-day-chip' + css}
+    if (!segment || !event.startTime) return <button type="button" key={`session:${event.id}`} {...data} className={'all-day-chip' + css}
+      ref={target?.entity === 'event' && target.id === event.id && date === event.startDate ? highlightedAllDay : undefined}
       disabled={deleted} title={title} onClick={click => {click.stopPropagation(); onOpen(event);}}>{title}</button>;
     const {start, end, lane, lanes} = segment;
     const height = (end - start) * MINUTE_PX;

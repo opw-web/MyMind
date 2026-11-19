@@ -1,12 +1,12 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
-import type {ActionPreviewTarget, AssistantViewAction, Change, EventItem, Project, Snapshot, Task, TaskStep} from '../shared/model';
+import type {AssistantViewAction, Change, EventItem, Project, Snapshot, Task, TaskStep} from '../shared/model';
 import {shiftDate, todayIn} from '../shared/dates';
 import {Icon} from './App';
 import {PixelCat, PixelFlower} from './Pixel';
 import BloomCalendar, {type BlockSlot, type CalendarHandle} from './BloomCalendar';
 import BloomCategories from './BloomCategories';
 import BloomComposer from './BloomComposer';
-import {Button, useEscape} from './BloomControls';
+import {Button, useEscape, type PlannerPreviewTarget} from './BloomControls';
 import BloomEditor, {type Editor} from './BloomEditor';
 import BloomTasks, {type CompletionFilter, type ScheduleFilter} from './BloomTasks';
 
@@ -39,7 +39,7 @@ export default function Workspace() {
   const [schedule, setSchedule] = useState<ScheduleFilter>('all');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const [target, setTarget] = useState<ActionPreviewTarget | null>(null);
+  const [target, setTarget] = useState<PlannerPreviewTarget | null>(null);
 
   const calendar = useRef<CalendarHandle>(null);
   const tasksPanel = useRef<HTMLDivElement>(null);
@@ -93,9 +93,9 @@ export default function Workspace() {
   const showAll = useCallback(() => setHidden(new Set()), []);
   const setProjectCollapsed = useCallback((id: string, value: boolean) => setCollapsed(current => withMembership(current, id, value)), []);
   const setTaskExpanded = useCallback((id: string, value: boolean) => setExpanded(current => withMembership(current, id, value)), []);
-  const onPreview = useCallback((next: ActionPreviewTarget | null) => {
+  const onPreview = useCallback((next: PlannerPreviewTarget | null) => {
     if (next && document.querySelector('dialog.bloom-editor[open]')) return;
-    if (next) setView(next.entity === 'event' || next.entity === 'category' ? 'calendar' : 'tasks');
+    if (next) setView(next.entity === 'event' || next.calendarDeadline || next.entity === 'category' ? 'calendar' : 'tasks');
     setTarget(next);
   }, []);
 
@@ -115,6 +115,11 @@ export default function Workspace() {
 
   useLayoutEffect(() => {
     if (!target || !snapshot) return;
+    if (target.calendarDeadline) {
+      const task = snapshot.tasks.find(task => task.id === target.id);
+      if (task?.dueDate) calendar.current?.goTo(task.dueDate);
+      return;
+    }
     if (target.entity === 'event') {
       const record = snapshot.events.find(event => event.id === target.id) ?? target.before;
       if (record && typeof record.startDate === 'string') {
@@ -275,7 +280,7 @@ export default function Workspace() {
           <span className="single-calendar-note">One calendar · all your moments</span>
         </div>
         <BloomCalendar ref={calendar} snapshot={snapshot} today={today} now={now} hiddenCategories={hidden} target={target}
-          onOpen={openEvent} onNew={newEvent} onLead={setLeadDate}/>
+          onOpen={openEvent} onTask={openTask} onNew={newEvent} onLead={setLeadDate}/>
         <div className="calendar-footnote"><span><span className="soft-dot"/> Click or drag an empty time slot to make a block.</span>
           <span>↔ days <span className="hint-separator">·</span> ↕ hours</span></div>
       </div>
@@ -285,7 +290,7 @@ export default function Workspace() {
           onTask={openTask} onProject={openProject} onSchedule={scheduleTask} onProjectCollapse={setProjectCollapsed}
           onTaskExpand={setTaskExpanded} onTaskCheck={checkTask} onStepCheck={checkStep}/>
       </div>
-      <BloomComposer preferences={snapshot.preferences} onPreview={onPreview} onViewAction={onViewAction}/>
+      <BloomComposer snapshot={snapshot} onPreview={onPreview} onViewAction={onViewAction}/>
     </main>
     {editor && <BloomEditor key={editor.kind + (editor.item?.id ?? '')} editor={editor} snapshot={snapshot} busy={busy}
       error={toast?.error ? toast.text : undefined} onClose={() => {setEditor(null); setToast(value => value?.error ? null : value);}}

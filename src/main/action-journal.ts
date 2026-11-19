@@ -133,11 +133,18 @@ export class ActionJournal {
   }
 
   history():ChatMessage[] {
-    return this.db.prepare('SELECT id,input FROM chat_turns ORDER BY rowid').all().flatMap(row=>{
+    return this.db.prepare(`SELECT id,input FROM chat_turns
+      WHERE rowid > COALESCE((SELECT CAST(value AS INTEGER) FROM meta WHERE key='chat_history_cutoff'),0)
+      ORDER BY rowid`).all().flatMap(row=>{
       const id=String(row.id),result=this.result(id);
       const message:ChatMessage={id:`${id}:user`,role:'user',content:String(row.input)};
       return result?[message,{id:`${id}:assistant`,role:'assistant',...result}]:[message];
     });
+  }
+
+  startConversation(){
+    this.db.exec(`INSERT OR REPLACE INTO meta (key,value)
+      SELECT 'chat_history_cutoff', COALESCE(MAX(rowid),0) FROM chat_turns`);
   }
 
   recover(){
@@ -147,7 +154,7 @@ export class ActionJournal {
 
   clear(){
     this.db.exec('BEGIN IMMEDIATE');
-    try{this.db.exec('DELETE FROM chat_turns; DELETE FROM action_versions; COMMIT');}
+    try{this.db.exec("DELETE FROM chat_turns; DELETE FROM action_versions; DELETE FROM meta WHERE key='chat_history_cutoff'; COMMIT");}
     catch(error){this.db.exec('ROLLBACK');throw error;}
   }
 

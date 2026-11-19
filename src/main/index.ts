@@ -99,7 +99,11 @@ else {
     });
     handle('assistant:check-input', input => assistant!.checkInput(input,true));
     handle('assistant:cancel', () => assistant!.cancel());
-    handle('assistant:reset',()=>assistant!.reset());
+    handle('assistant:reset',async()=>{
+      if(currentChat)throw new Error('Wait for the current reply or stop it first.');
+      db!.startConversation();
+      await assistant!.reset();
+    });
     handle('assistant:status', () => runtime!.status);
     handle('assistant:settings',()=>runtime!.settings());
     handle('assistant:configure',async input=>{const settings=runtimeSchema.parse(input);assistant!.cancel();await runtime!.configure(settings);writeFileSync(join(dataDir,'assistant-settings.json'),JSON.stringify(settings));});

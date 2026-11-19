@@ -2,14 +2,14 @@ import {DictationDraft,SpeechProgress} from '../shared/model';
 import {LiveTranscript} from './live-transcript';
 
 type Phase='idle'|'starting'|'listening'|'finishing'|'failed'|'review';
-export type DictationState={phase:Phase;caption:string;error:string;level:number;seconds:number;lag:number;unsaved:boolean;draft?:DictationDraft;drafts:DictationDraft[];text:string;textVersion:number;finalProgress:string};
+export type DictationState={phase:Phase;caption:string;error:string;level:number;seconds:number;lag:number;unsaved:boolean;draft?:DictationDraft;text:string;textVersion:number;finalProgress:string};
 type Capture={editsAtStart:number;draft?:DictationDraft;stream?:MediaStream;context?:AudioContext;source?:MediaStreamAudioSourceNode;worklet?:AudioWorkletNode;recorder?:MediaRecorder;stopped?:Promise<void>;timer?:ReturnType<typeof setInterval>;started:number;stopping:boolean;pending:{sequence:number;blob:Blob;seconds:number}[];nextSequence:number;saving?:Promise<void>;flushing?:Promise<void>;pcm:Float32Array;frames:number;previewId?:string;previewPromise?:Promise<void>;lastPreview:number;previewSequence:number;merger:LiveTranscript;};
 const append=(prefix:string,text:string)=>[prefix.trim(),text.trim()].filter(Boolean).join(' ');
 const errorText=(e:unknown)=>e instanceof Error?e.message:String(e);
 const active=(phase:Phase)=>phase==='starting'||phase==='listening'||phase==='finishing';
 
 class DictationSession {
-  private state:DictationState={phase:'idle',caption:'',error:'',level:0,seconds:0,lag:0,unsaved:false,drafts:[],text:'',textVersion:0,finalProgress:''};
+  private state:DictationState={phase:'idle',caption:'',error:'',level:0,seconds:0,lag:0,unsaved:false,text:'',textVersion:0,finalProgress:''};
   private listeners=new Set<()=>void>();
   private capture?:Capture;
   private generation=crypto.randomUUID();
@@ -28,9 +28,7 @@ class DictationSession {
     if(this.initialized)return;this.initialized=true;
     window.planner.onSpeechProgress(event=>this.progress(event));
     window.planner.onPrepareClose(async()=>{await this.cancel();await this.metadata;});
-    void this.refresh();
   }
-  async refresh(){try{this.update({drafts:await window.planner.listDictations()});}catch(e){this.fail(e,'Could not read saved dictations.');}}
   private checkpoint(input:{draftId:string;generation:string;liveText?:string;reviewText?:string;seconds?:number}){
     const editVersion=this.edits,textVersion=this.state.textVersion;
     const pending=this.metadata.then(async()=>{
@@ -76,7 +74,7 @@ class DictationSession {
     try{
       c.draft=await window.planner.createDictation({generation:this.generation,prefix});
       if(c.stopping||this.capture!==c)return;
-      this.update({draft:c.draft});void this.refresh();
+      this.update({draft:c.draft});
       if(!MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))throw new Error('WebM recording is unavailable. Reinstall MYMIND.');
       c.context=new AudioContext({sampleRate:16000});await c.context.resume();
       if(c.stopping||this.capture!==c){this.release(c);return;}
@@ -167,7 +165,7 @@ class DictationSession {
     try{
       await flushing;
       if(this.capture!==c)return;
-      this.update({phase:'review',caption:'Draft saved locally. Review it or retry transcription.'});void this.refresh();
+      this.update({phase:'review',caption:'Draft saved locally. Review it or retry transcription.'});
       if(transcribe&&operation===this.operation&&c.draft?.bytes)return await this.transcribe(this.edits!==c.editsAtStart);
     }catch(e){this.release(c);if(this.capture===c){this.update({phase:'failed'});this.fail(e,'Your recording is retained. Retry saving and transcription.');}}
   }
@@ -190,8 +188,7 @@ class DictationSession {
       if(preserveEdits||this.edits!==editVersion){saved.reviewText=this.state.text;await this.checkpoint({draftId:saved.id,generation:saved.generation,reviewText:this.state.text});}
       if(this.operation!==token||this.request!==id)return;
       this.update({draft:saved,phase:result.text.trim()?'review':'failed',caption:result.text.trim()?'Transcript ready. Review it, then press Send.':'No speech found in the final pass. Your live text and recording are retained.'});
-      if(result.text.trim()&&!preserveEdits&&this.edits===editVersion){this.publish(saved.reviewText);void this.refresh();return saved.reviewText;}
-      void this.refresh();
+      if(result.text.trim()&&!preserveEdits&&this.edits===editVersion){this.publish(saved.reviewText);return saved.reviewText;}
     }catch(e){if(this.operation===token&&this.request===id){this.update({phase:'failed'});this.fail(e);}}
     finally{if(this.request===id)this.request=undefined;}
   }
@@ -205,29 +202,14 @@ class DictationSession {
     if(this.capture&&!this.capture.stopping)await this.stop(false);
     else if(this.capture){await this.capture.flushing?.catch(()=>{});this.release(this.capture);if(this.capture.pending.length)try{await this.saveChunks(this.capture);}catch(e){this.fail(e,'Could not save the remaining audio. Retry saving this draft.');}}
     await this.metadata;
-    this.update({phase:this.capture?.pending.length?'failed':this.state.draft?'review':'idle',level:0,caption:this.capture?.pending.length?'Audio could not be saved. Retained chunks are available to retry.':'Dictation stopped. Your draft is saved locally.'});void this.refresh();
-  }
-  async detach(){
-    await this.cancel();if(this.capture?.pending.length)throw new Error('Some captured audio could not be saved. Retry saving before starting a new chat.');this.capture=undefined;this.generation=crypto.randomUUID();
-    this.update({draft:undefined,phase:'idle',caption:'',finalProgress:'',seconds:0,error:''});void this.refresh();
-  }
-  async restore(id:string,currentText:string){
-    if(active(this.state.phase))await this.cancel();
-    if(this.state.draft)await this.detach();
-    else if(currentText.trim()){
-      const saved=await window.planner.createDictation({generation:crypto.randomUUID(),prefix:currentText});
-      await window.planner.checkpointDictation({draftId:saved.id,generation:saved.generation,reviewText:currentText});
-    }
-    await this.metadata;this.generation=crypto.randomUUID();
-    const draft=await window.planner.restoreDictation({draftId:id,generation:this.generation});
-    this.capture=undefined;this.update({draft,phase:'review',caption:'Recovered draft. Review it before Send.',seconds:Math.floor(draft.seconds),error:'',finalProgress:''});this.publish(draft.reviewText||append(draft.prefix,draft.finalText||draft.liveText));void this.refresh();
+    this.update({phase:this.capture?.pending.length?'failed':this.state.draft?'review':'idle',level:0,caption:this.capture?.pending.length?'Audio could not be saved. Retained chunks are available to retry.':'Dictation stopped. Your draft is saved locally.'});
   }
   async discard(id=this.state.draft?.id){
     if(!id)return;
     if(this.state.draft?.id===id){await this.cancel();this.capture=undefined;this.update({draft:undefined,phase:'idle',caption:'Draft discarded.',finalProgress:''});}
-    await this.metadata;await window.planner.discardDictation(id);await this.refresh();
+    await this.metadata;await window.planner.discardDictation(id);
   }
-  async sent(id:string,generation:string,text:string){await this.metadata;const saved=await window.planner.getDictation(id);if(saved.generation!==generation||saved.reviewText.trim()!==text.trim())return;if(this.state.draft?.id===id){this.capture=undefined;this.update({draft:undefined,phase:'idle',caption:'',finalProgress:''});}await window.planner.discardDictation(id);await this.refresh();}
+  async sent(id:string,generation:string,text:string){await this.metadata;const saved=await window.planner.getDictation(id);if(saved.generation!==generation||saved.reviewText.trim()!==text.trim())return;if(this.state.draft?.id===id){this.capture=undefined;this.update({draft:undefined,phase:'idle',caption:'',finalProgress:''});}await window.planner.discardDictation(id);}
   async useVersion(kind:'live'|'final'){
     await this.cancel();const draft=this.state.draft;if(!draft)return;
     const text=append(draft.prefix,kind==='live'?draft.liveText:draft.finalText);
