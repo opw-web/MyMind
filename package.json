@@ -116,5 +116,10 @@
       "artifactName": "MYMIND-Setup-${version}.exe"
     },
     "asar": false
+  },
+  "allowScripts": {
+    "electron-winstaller@5.4.0": true,
+    "esbuild@0.28.2": true,
+    "koffi@3.3.2": true
   }
 }
